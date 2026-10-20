@@ -8,15 +8,27 @@ poster ekka Discord status ekata yawanawa. Windows walata witharai.
 import ctypes
 import inspect
 import queue
-import re
+import sys
 import threading
 import time
 import tkinter as tk
 from ctypes import wintypes
+from tkinter import messagebox
 
 from pypresence import Presence
 
+import app_icon
 import media_info
+import system_integration as sysint
+
+try:
+    import pystray
+except Exception:             # tray nathuwa wada karanna puluwan (X eken app eka close wenawa)
+    pystray = None
+try:
+    from PIL import ImageTk
+except Exception:
+    ImageTk = None
 
 try:
     from pypresence import ActivityType
@@ -178,16 +190,26 @@ STATUS = {
 
 
 class App:
-    def __init__(self, root):
+    def __init__(self, root, start_hidden=False):
         self.root = root
-        self.events = queue.Queue()
+        self.events = queue.Queue()      # worker -> UI
+        self.commands = queue.Queue()    # tray menu -> UI (Tk thread-safe nathi nisa)
         self.worker = None
         self.watch_started = None
+        self.tray = None
+        self.tray_notified = False
+        self.quitting = False
 
         root.title("PotPlayer RPC")
-        root.geometry("380x370")
+        root.geometry("380x430")
         root.resizable(False, False)
         root.configure(bg=BG)
+        if ImageTk is not None:
+            try:
+                self.window_icon = ImageTk.PhotoImage(app_icon.make_icon_image(64))
+                root.iconphoto(True, self.window_icon)
+            except Exception:
+                pass
 
         tk.Label(root, text="PotPlayer RPC", bg=BG, fg=TEXT,
                  font=("Segoe UI", 18, "bold")).pack(pady=(18, 2))
@@ -231,14 +253,25 @@ class App:
                                 font=("Segoe UI", 11, "bold"), width=18, pady=8)
         self.button.pack(pady=(18, 8))
 
-        tk.Label(root, text="Keep Discord (desktop app) open while using this.",
-                 bg=BG, fg=MUTED, font=("Segoe UI", 8)).pack()
+        self.autostart_var = tk.BooleanVar(value=sysint.is_autostart_enabled())
+        tk.Checkbutton(root, text="Start with Windows", variable=self.autostart_var,
+                       command=self.on_autostart_checkbox, bg=BG, fg=TEXT,
+                       selectcolor=CARD, activebackground=BG, activeforeground=TEXT,
+                       highlightthickness=0, bd=0, cursor="hand2",
+                       font=("Segoe UI", 10)).pack(pady=(2, 6))
+
+        tk.Label(root, text="Closing this window keeps the app running in the system tray.\n"
+                            "Keep Discord (desktop app) open.",
+                 bg=BG, fg=MUTED, font=("Segoe UI", 8), justify="center").pack()
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.process_events)
         self.root.after(1000, self.tick)
 
+        self.setup_tray()
         self.start()   # open karanakotama auto-start
+        if start_hidden and self.tray is not None:
+            root.withdraw()    # Windows eka start wenakota tray ekata witharai
 
     # -- state ---------------------------------------------------------------
 
@@ -248,6 +281,14 @@ class App:
         self.dot.itemconfig(self.dot_item, fill=color)
 
     def set_watching(self, media):
+        if self.tray is not None:
+            try:      # tray icon eke hover tooltip eka (127 akuru wala sima ekak thiyenawa)
+                tip = "PotPlayer RPC"
+                if media is not None:
+                    tip = f"{media.display_title()} {media.subtitle()}"
+                self.tray.title = tip[:127]
+            except Exception:
+                pass
         if media is not None:
             self.title_label.config(text=media.display_title())
             self.sub_label.config(text=media.subtitle())
@@ -295,13 +336,109 @@ class App:
         else:
             self.start()
 
+    # -- tray / window / autostart -------------------------------------------
+
+    def setup_tray(self):
+        if pystray is None:
+            return
+        try:
+            menu = pystray.Menu(
+                pystray.MenuItem("Show window",
+                                 lambda icon, item: self.commands.put("show"), default=True),
+                pystray.MenuItem(lambda item: "Stop" if self.running() else "Start",
+                                 lambda icon, item: self.commands.put("toggle")),
+                pystray.MenuItem("Start with Windows",
+                                 lambda icon, item: self.commands.put("autostart"),
+                                 checked=lambda item: sysint.is_autostart_enabled()),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem("Quit", lambda icon, item: self.commands.put("quit")),
+            )
+            self.tray = pystray.Icon("PotPlayerRPC", app_icon.make_icon_image(64),
+                                     "PotPlayer RPC", menu)
+            self.tray.run_detached()
+        except Exception:
+            self.tray = None
+
+    def refresh_tray(self):
+        if self.tray is not None:
+            try:
+                self.tray.update_menu()
+            except Exception:
+                pass
+
+    def show_window(self):
+        self.root.deiconify()
+        self.root.lift()
+        try:
+            self.root.focus_force()
+        except tk.TclError:
+            pass
+
+    def hide_window(self):
+        self.root.withdraw()
+        if not self.tray_notified and self.tray is not None:
+            self.tray_notified = True
+            try:
+                self.tray.notify("Still running in the system tray. "
+                                 "Right-click the tray icon to quit.", "PotPlayer RPC")
+            except Exception:
+                pass
+
     def on_close(self):
+        # X click karama tray ekata, tray nathnam app eka close
+        if self.tray is not None:
+            self.hide_window()
+        else:
+            self.quit_app()
+
+    def quit_app(self):
+        if self.quitting:
+            return
+        self.quitting = True
         self.stop()
+        if self.tray is not None:
+            try:
+                self.tray.stop()
+            except Exception:
+                pass
         self.root.destroy()
+
+    def on_autostart_checkbox(self):
+        wanted = self.autostart_var.get()
+        if not sysint.set_autostart(wanted):
+            self.autostart_var.set(sysint.is_autostart_enabled())
+            messagebox.showwarning("PotPlayer RPC", "Could not change the Windows startup setting.")
+        self.refresh_tray()
+
+    def toggle_autostart(self):
+        wanted = not sysint.is_autostart_enabled()
+        sysint.set_autostart(wanted)
+        self.autostart_var.set(sysint.is_autostart_enabled())
+        self.refresh_tray()
+
+    def handle_commands(self):
+        try:
+            while True:
+                cmd = self.commands.get_nowait()
+                if cmd == "show":
+                    self.show_window()
+                elif cmd == "toggle":
+                    self.toggle()
+                    self.refresh_tray()
+                elif cmd == "autostart":
+                    self.toggle_autostart()
+                elif cmd == "quit":
+                    self.quit_app()
+                    return
+        except queue.Empty:
+            pass
 
     # -- periodic jobs --------------------------------------------------------
 
     def process_events(self):
+        self.handle_commands()
+        if self.quitting:
+            return
         try:
             while True:
                 kind, payload = self.events.get_nowait()
@@ -325,8 +462,23 @@ class App:
 
 
 def main():
+    if not sysint.acquire_single_instance():
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("PotPlayer RPC",
+                            "PotPlayer RPC is already running.\n"
+                            "Check the system tray (the ^ arrow next to the clock).")
+        root.destroy()
+        return
+
+    # palaweni wara run karaddi Windows start wenakota auto-start wenna on karanawa
+    # (window eke "Start with Windows" eken off karanna puluwan)
+    if sysint.is_first_run():
+        sysint.set_autostart(True)
+        sysint.mark_first_run_done()
+
     root = tk.Tk()
-    App(root)
+    App(root, start_hidden="--minimized" in sys.argv)
     root.mainloop()
 
 

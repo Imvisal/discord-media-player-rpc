@@ -14,6 +14,13 @@ Window eke:
 - **Now watching** eke dan play wena film eka saha kiyak welawak balala thiyenawada kiyala pennanawa.
 - **Stop / Start** button eken status eka off/on karanna puluwan. Window eka close karaddi status eka clear wenawa.
 
+## System tray saha auto-start
+- Window eke **X** click karama app eka close wenne nae, **system tray** ekata (clock eka langa ^ arrow eka) yanawa. Dan wath wada karanawa.
+- Tray icon eka **double-click** karoth window eka aye pennanawa. **Right-click** karoth menu eka: Show window, Start/Stop, Start with Windows, **Quit**. Hari ekata app eka nawathinna **Quit** use karanna.
+- **Start with Windows** (window eke checkbox eka ho tray menu eka): PC eka on wenakota app eka tray ekata ihimen start wenawa. Palaweni wara app eka run karaddi meka ihimen **ON** wenawa, ona nam off karanna.
+- Auto-start wenne exe eka thiyena **thana** (path eka) register karala. Nisa exe eka hari thanakata (udaharana: `C:\Apps\PotPlayerRPC\`) damma passe run karanna. Pasuwa ekata move karoth, "Start with Windows" off/on karanna.
+- App eka dekak ekawara run wenne nae. Aye open karoth "already running" kiyala pennanawa.
+
 ## Poster / episode detect wenne kohomada
 - File nama eken (`The_Mentalist_S01E01_...mkv`, `Inception.2010.1080p...`, `Show - 05`) series ekakda film ekakda kiyala hoyaganna, quality/release tags (720p, x265, BluRay wage) ain karanawa.
 - **TV series**: TVmaze walin (API key one nae) show eke poster eka, ona nam episode eke nama ganna.
