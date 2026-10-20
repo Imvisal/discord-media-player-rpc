@@ -13,9 +13,47 @@ from ctypes import wintypes
 
 from pypresence import Presence
 
-# Discord Developer Portal eken hadapu Application ID eka methanata danna
-# (README eke 1 step eka balanna). Environment variable ekakuth danna puluwan.
-CLIENT_ID = os.environ.get("DISCORD_CLIENT_ID", "YOUR_APPLICATION_ID_HERE")
+import json
+
+# Application ID eka mehema hoyaganna:
+#   1. DISCORD_CLIENT_ID environment variable eka
+#   2. %APPDATA%\PotPlayerRPC\config.json (palaweni wara ahala save karanawa)
+#   3. Nathnam run karaddi ahanawa
+CONFIG_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "PotPlayerRPC")
+CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
+
+
+def load_client_id():
+    env_id = os.environ.get("DISCORD_CLIENT_ID", "").strip()
+    if env_id:
+        return env_id
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            saved = str(json.load(f).get("client_id", "")).strip()
+            if saved:
+                return saved
+    except (OSError, ValueError):
+        pass
+
+    print("Discord Application ID eka thama haduwe nae.")
+    print("(discord.com/developers/applications eken New Application ekak hadala,")
+    print(" nama 'PotPlayer' denna, General Information eke Application ID eka copy karanna)")
+    while True:
+        entered = input("Application ID eka methanata paste karala Enter ebuwa: ").strip()
+        if entered.isdigit() and len(entered) >= 17:
+            break
+        print("Meka waradi wage. ID eka ankayen witharai hadila thiyenna one (17-20 ankaya).")
+    try:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump({"client_id": entered}, f)
+        print("ID eka save kala. Ita passe aye ahanne nae.")
+    except OSError as exc:
+        print(f"ID eka save karanna ba una ({exc}). Next time aye ahanawa.")
+    return entered
+
+
+CLIENT_ID = None
 
 POLL_SECONDS = 5          # PotPlayer check karana gaman (seconds)
 TITLE_SUFFIX = " - PotPlayer"
@@ -66,9 +104,8 @@ def connect():
 
 
 def main():
-    if CLIENT_ID == "YOUR_APPLICATION_ID_HERE":
-        print("CLIENT_ID eka danna one. README eke step 1 balanna.")
-        sys.exit(1)
+    global CLIENT_ID
+    CLIENT_ID = load_client_id()
 
     rpc = None
     last_title = None
