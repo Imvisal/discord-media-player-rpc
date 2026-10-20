@@ -1,24 +1,24 @@
 """
-PotPlayer -> Discord Rich Presence (GUI)
+Media RPC - Discord Rich Presence for video players (GUI)
 
-PotPlayer window title eka kiyawala, film / TV series episode eka hoyagena
-poster ekka Discord status ekata yawanawa. Windows walata witharai.
+PotPlayer, VLC, KMPlayer, MPC-HC, MPC-BE, SMPlayer, mpv, GOM Player wage players walin
+film / TV series episode eka hoyagena, poster ekka Discord status ekata yawanawa.
+Windows walata witharai.
 """
 
-import ctypes
 import inspect
 import queue
 import sys
 import threading
 import time
 import tkinter as tk
-from ctypes import wintypes
 from tkinter import messagebox
 
 from pypresence import Presence
 
 import app_icon
 import media_info
+import players
 import system_integration as sysint
 
 try:
@@ -29,7 +29,6 @@ try:
     from PIL import ImageTk
 except Exception:
     ImageTk = None
-
 try:
     from pypresence import ActivityType
 except ImportError:           # pypresence passe version walata witharai thiyenne
@@ -42,43 +41,16 @@ except ImportError:
 # Discord Application ID (secret ekak nemei, public wenna puluwan)
 CLIENT_ID = "1561956752105283635"
 
-POLL_SECONDS = 5      # PotPlayer check karana gaman (seconds)
+APP_TITLE = "Media RPC"
+POLL_SECONDS = 5      # player check karana gaman (seconds)
 RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
-TITLE_SUFFIX = " - PotPlayer"
 
 UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
-
-# ---------------------------------------------------------------- Win32 helpers
-
-user32 = ctypes.windll.user32
-EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-
-
-def find_potplayer_title():
-    """PotPlayer window eke title eka return karanawa. Nathnam None."""
-    found = []
-
-    def callback(hwnd, _lparam):
-        if not user32.IsWindowVisible(hwnd):
-            return True
-        length = user32.GetWindowTextLengthW(hwnd)
-        if length == 0:
-            return True
-        buf = ctypes.create_unicode_buffer(length + 1)
-        user32.GetWindowTextW(hwnd, buf, length + 1)
-        title = buf.value
-        if title.endswith(TITLE_SUFFIX):
-            found.append(title[: -len(TITLE_SUFFIX)])
-            return False
-        return True
-
-    user32.EnumWindows(EnumWindowsProc(callback), 0)
-    return found[0] if found else None
 
 
 # ---------------------------------------------------------------- Discord activity
 
-def build_activity(media, started_at):
+def build_activity(media, started_at, player_name):
     details = media.display_title()
     state = media.subtitle()
     kwargs = {
@@ -88,11 +60,11 @@ def build_activity(media, started_at):
     }
     if media.poster and len(media.poster) <= 256:
         kwargs["large_image"] = media.poster
-        kwargs["large_text"] = details[:128].ljust(2)
+        kwargs["large_text"] = f"{details} · {player_name}"[:128]
     # "Watching ..." card eka (Crunchyroll wage) pennanna
     if ActivityType is not None and "activity_type" in UPDATE_PARAMS:
         kwargs["activity_type"] = ActivityType.WATCHING
-    # Member list eke "PotPlayer" wenuwata film nama pennanna
+    # Member list eke app eke nama wenuwata film nama pennanna
     if StatusDisplayType is not None and "status_display_type" in UPDATE_PARAMS:
         details_mode = getattr(StatusDisplayType, "DETAILS", None)
         if details_mode is not None:
@@ -103,7 +75,7 @@ def build_activity(media, started_at):
 # ---------------------------------------------------------------- Background worker
 
 class RpcWorker(threading.Thread):
-    """Discord ekata connect wela PotPlayer title eka yawana thread eka."""
+    """Discord ekata connect wela player eke film eka yawana thread eka."""
 
     def __init__(self, events):
         super().__init__(daemon=True)
@@ -115,8 +87,9 @@ class RpcWorker(threading.Thread):
 
     def run(self):
         rpc = None
-        last_raw = None
+        last_key = None
         media = None
+        player_name = ""
         started_at = None
 
         while not self.stop_event.is_set():
@@ -127,21 +100,23 @@ class RpcWorker(threading.Thread):
                     rpc.connect()
                     self.emit("status", "connected")
 
-                raw = find_potplayer_title()
-                if raw is None:
-                    if last_raw is not None:
+                playing = players.find_playing()
+                if playing is None:
+                    if last_key is not None:
                         rpc.clear()
-                        last_raw = None
+                        last_key = None
                         media = None
                         self.emit("watching", None)
                 else:
-                    if raw != last_raw:
+                    player_name, raw = playing
+                    key = (player_name, raw)
+                    if key != last_key:
                         # parse + poster hoyanna (palaweni wara tikak welawak yanawa)
                         media = media_info.resolve(raw)
                         started_at = int(time.time())
-                        last_raw = raw
-                        self.emit("watching", media)
-                    rpc.update(**build_activity(media, started_at))
+                        last_key = key
+                        self.emit("watching", (media, player_name))
+                    rpc.update(**build_activity(media, started_at, player_name))
             except Exception:
                 # Discord close una / restart una wage welawal
                 try:
@@ -150,7 +125,7 @@ class RpcWorker(threading.Thread):
                 except Exception:
                     pass
                 rpc = None
-                last_raw = None
+                last_key = None
                 media = None
                 self.emit("status", "error")
                 self.emit("watching", None)
@@ -200,8 +175,8 @@ class App:
         self.tray_notified = False
         self.quitting = False
 
-        root.title("PotPlayer RPC")
-        root.geometry("380x430")
+        root.title(APP_TITLE)
+        root.geometry("380x440")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -211,7 +186,7 @@ class App:
             except Exception:
                 pass
 
-        tk.Label(root, text="PotPlayer RPC", bg=BG, fg=TEXT,
+        tk.Label(root, text=APP_TITLE, bg=BG, fg=TEXT,
                  font=("Segoe UI", 18, "bold")).pack(pady=(18, 2))
         tk.Label(root, text="Show what you're watching on Discord", bg=BG, fg=MUTED,
                  font=("Segoe UI", 10)).pack()
@@ -229,8 +204,9 @@ class App:
         # now watching card
         card = tk.Frame(root, bg=CARD, padx=16, pady=14)
         card.pack(fill="x", padx=24)
-        tk.Label(card, text="NOW WATCHING", bg=CARD, fg=MUTED,
-                 font=("Segoe UI", 8, "bold"), anchor="w").pack(fill="x")
+        self.heading_label = tk.Label(card, text="NOW WATCHING", bg=CARD, fg=MUTED,
+                                      font=("Segoe UI", 8, "bold"), anchor="w")
+        self.heading_label.pack(fill="x")
         self.title_label = tk.Label(card, text="Nothing playing", bg=CARD, fg=TEXT,
                                     font=("Segoe UI", 12, "bold"), anchor="w",
                                     justify="left", wraplength=310)
@@ -260,8 +236,9 @@ class App:
                        highlightthickness=0, bd=0, cursor="hand2",
                        font=("Segoe UI", 10)).pack(pady=(2, 6))
 
-        tk.Label(root, text="Closing this window keeps the app running in the system tray.\n"
-                            "Keep Discord (desktop app) open.",
+        tk.Label(root, text="Works with PotPlayer, VLC, KMPlayer, MPC-HC, MPC-BE,\n"
+                            "SMPlayer, mpv and GOM Player. Keep Discord (desktop app) open.\n"
+                            "Closing this window keeps the app running in the system tray.",
                  bg=BG, fg=MUTED, font=("Segoe UI", 8), justify="center").pack()
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -280,16 +257,18 @@ class App:
         self.status_label.config(text=text)
         self.dot.itemconfig(self.dot_item, fill=color)
 
-    def set_watching(self, media):
+    def set_watching(self, payload):
+        media, player_name = payload if payload else (None, "")
         if self.tray is not None:
             try:      # tray icon eke hover tooltip eka (127 akuru wala sima ekak thiyenawa)
-                tip = "PotPlayer RPC"
+                tip = APP_TITLE
                 if media is not None:
                     tip = f"{media.display_title()} {media.subtitle()}"
                 self.tray.title = tip[:127]
             except Exception:
                 pass
         if media is not None:
+            self.heading_label.config(text=f"NOW WATCHING · {player_name.upper()}")
             self.title_label.config(text=media.display_title())
             self.sub_label.config(text=media.subtitle())
             self.poster_label.config(
@@ -297,6 +276,7 @@ class App:
             )
             self.watch_started = time.time()
         else:
+            self.heading_label.config(text="NOW WATCHING")
             self.title_label.config(text="Nothing playing")
             self.sub_label.config(text="")
             self.poster_label.config(text="")
@@ -353,8 +333,7 @@ class App:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit", lambda icon, item: self.commands.put("quit")),
             )
-            self.tray = pystray.Icon("PotPlayerRPC", app_icon.make_icon_image(64),
-                                     "PotPlayer RPC", menu)
+            self.tray = pystray.Icon("MediaRPC", app_icon.make_icon_image(64), APP_TITLE, menu)
             self.tray.run_detached()
         except Exception:
             self.tray = None
@@ -380,7 +359,7 @@ class App:
             self.tray_notified = True
             try:
                 self.tray.notify("Still running in the system tray. "
-                                 "Right-click the tray icon to quit.", "PotPlayer RPC")
+                                 "Right-click the tray icon to quit.", APP_TITLE)
             except Exception:
                 pass
 
@@ -407,7 +386,7 @@ class App:
         wanted = self.autostart_var.get()
         if not sysint.set_autostart(wanted):
             self.autostart_var.set(sysint.is_autostart_enabled())
-            messagebox.showwarning("PotPlayer RPC", "Could not change the Windows startup setting.")
+            messagebox.showwarning(APP_TITLE, "Could not change the Windows startup setting.")
         self.refresh_tray()
 
     def toggle_autostart(self):
@@ -465,11 +444,14 @@ def main():
     if not sysint.acquire_single_instance():
         root = tk.Tk()
         root.withdraw()
-        messagebox.showinfo("PotPlayer RPC",
-                            "PotPlayer RPC is already running.\n"
+        messagebox.showinfo(APP_TITLE,
+                            f"{APP_TITLE} is already running.\n"
                             "Check the system tray (the ^ arrow next to the clock).")
         root.destroy()
         return
+
+    # palaya nama (PotPlayerRPC) walin enawanam auto-start/settings karagannawa
+    sysint.migrate_legacy()
 
     # palaweni wara run karaddi Windows start wenakota auto-start wenna on karanawa
     # (window eke "Start with Windows" eken off karanna puluwan)

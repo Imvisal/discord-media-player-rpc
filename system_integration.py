@@ -12,11 +12,14 @@ try:
 except ImportError:       # Windows nowana welawaka import wenne nae
     winreg = None
 
-APP_NAME = "PotPlayerRPC"
+APP_NAME = "MediaRPC"
+LEGACY_APP_NAME = "PotPlayerRPC"      # palaya nama
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 
-SETTINGS_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "PotPlayerRPC")
+_APPDATA = os.environ.get("APPDATA", os.path.expanduser("~"))
+SETTINGS_DIR = os.path.join(_APPDATA, "MediaRPC")
 SETTINGS_FILE = os.path.join(SETTINGS_DIR, "settings.json")
+LEGACY_SETTINGS_FILE = os.path.join(_APPDATA, "PotPlayerRPC", "settings.json")
 
 _mutex_handle = None      # process eka iwara wenakan thiyaganna
 
@@ -71,7 +74,7 @@ def acquire_single_instance():
     try:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.CreateMutexW.restype = ctypes.c_void_p
-        handle = kernel32.CreateMutexW(None, False, "Local\\PotPlayerRPC_SingleInstance")
+        handle = kernel32.CreateMutexW(None, False, "Local\\MediaRPC_SingleInstance")
         already_running = ctypes.get_last_error() == 183      # ERROR_ALREADY_EXISTS
         if already_running:
             return False
@@ -82,6 +85,28 @@ def acquire_single_instance():
 
 
 # ---------------------------------------------------------------- settings
+
+def migrate_legacy():
+    """Palaya "PotPlayerRPC" version eken enawanam auto-start eka saha settings aluth nama ekata gannawa."""
+    if winreg is None:
+        return
+    legacy_autostart = False
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0,
+                            winreg.KEY_SET_VALUE | winreg.KEY_QUERY_VALUE) as key:
+            try:
+                winreg.QueryValueEx(key, LEGACY_APP_NAME)
+                legacy_autostart = True
+                winreg.DeleteValue(key, LEGACY_APP_NAME)
+            except FileNotFoundError:
+                pass
+    except OSError:
+        pass
+    if (legacy_autostart or os.path.exists(LEGACY_SETTINGS_FILE)) and is_first_run():
+        mark_first_run_done()
+        if legacy_autostart:
+            set_autostart(True)
+
 
 def is_first_run():
     return not os.path.exists(SETTINGS_FILE)

@@ -28,16 +28,16 @@ jobs:
         run: python app_icon.py
 
       - name: Build exe
-        run: pyinstaller --onefile --noconsole --icon icon.ico --hidden-import pystray._win32 --name PotPlayerRPC potplayer_rpc.py
+        run: pyinstaller --onefile --noconsole --icon icon.ico --hidden-import pystray._win32 --name MediaRPC media_rpc.py
 
       - name: Upload exe as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PotPlayerRPC
-          path: dist/PotPlayerRPC.exe
+          name: MediaRPC
+          path: dist/MediaRPC.exe
 
       - name: Attach exe to GitHub Release (tags only)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/PotPlayerRPC.exe
+          files: dist/MediaRPC.exe
