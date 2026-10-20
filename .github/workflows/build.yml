@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt pyinstaller
 
       - name: Build exe
-        run: pyinstaller --onefile --name PotPlayerRPC potplayer_rpc.py
+        run: pyinstaller --onefile --noconsole --name PotPlayerRPC potplayer_rpc.py
 
       - name: Upload exe as workflow artifact
         uses: actions/upload-artifact@v4

@@ -2,40 +2,36 @@
 
 PotPlayer eke play wenna film/episode eke nama Discord status eke pennanna hadapu app ekak. Windows walata witharai.
 
-## Ahala widiya (exe eka use karanna, Python one nae)
+## Use karanna (Python one nae)
 
 1. **Releases** page eken latest `PotPlayerRPC.exe` eka download karanna.
-2. Discord desktop app eka open karala thiyenna.
-3. PotPlayer eke film ekak play karanna.
-4. `PotPlayerRPC.exe` double-click karanna.
-5. Palaweni wara Application ID eka ahanawa (yatin eka hoyaganna widiya balanna). Ita passe save wenawa, aye ahanne nae.
+2. Discord **desktop app** eka open karala thiyenna.
+3. `PotPlayerRPC.exe` double-click karanna. Window eka open wenakotama wada patan gannawa.
+4. PotPlayer eke film ekak play karanna. Discord profile eke "Playing PotPlayer" yatin film eke nama pennanawa.
 
-Nawathinna console window eka close karanna (ho Ctrl+C).
+Window eke:
+- **Status** (Connected / Discord not found) pennanawa.
+- **Now watching** eke dan play wena film eka saha kiyak welawak balala thiyenawada kiyala pennanawa.
+- **Stop / Start** button eken status eka off/on karanna puluwan. Window eka close karaddi status eka clear wenawa.
 
 > Windows SmartScreen "unrecognized app" kiyala pennuwoth **More info > Run anyway**. Meka unsigned app ekak nisa enawa.
 
-### Application ID eka hoyaganna widiya
-1. https://discord.com/developers/applications ekata gihin **New Application** click karanna.
-2. Nama ekak denna. **Meka thamai Discord eke "Playing ..." kiyala pennanne**, eka nisa "PotPlayer" kiyala denna.
-3. **General Information** eke thiyena **Application ID** eka copy karanna.
-
-ID eka wenas karanna one nam `%APPDATA%\PotPlayerRPC\config.json` eka delete karanna, aye ahanawa.
-
-## exe eka nethuwa Python walin run karanna
+## Python walin run karanna
 
 ```
 pip install -r requirements.txt
 python potplayer_rpc.py
 ```
 
-(Python install karaddi **Add Python to PATH** tick karanna.)
-
 ## exe eka hadanne kohomada
-`v` walin patan gannawa tag ekak (udaharanayak: `v1.0.0`) push karama GitHub Actions walin `PotPlayerRPC.exe` build wela **Releases** ekata add wenawa. Tag nathuwa **Actions > Build Windows exe > Run workflow** kalath, build eka **Artifacts** wala download karanna puluwan.
+`v` walin patan gannawa tag ekak (udaharanayak: `v1.1.0`) push karama (ho GitHub eke **Releases > Draft a new release** eken) GitHub Actions walin `PotPlayerRPC.exe` build wela **Releases** ekata add wenawa. Tag nathuwa **Actions > Build Windows exe > Run workflow** kalath, build eka **Artifacts** wala download karanna puluwan.
+
+## Application ID eka wenas karanna
+`potplayer_rpc.py` eke `CLIENT_ID` eka wenas karanna (https://discord.com/developers/applications > oyage application > General Information > Application ID). Application eke **nama** thamai Discord eke "Playing ..." kiyala pennanne.
 
 ## Prashna awoth
 - **Discord eke pennanne nae**: Settings > Activity Privacy > "Share your detected activity" ON da balanna.
-- **Connect wenne nae**: Discord desktop app eka open da balanna (browser eka nowe). Discord ekai exe ekai ekama permission level eken run karanna (dekama normal).
+- **"Discord not found, retrying..." kiyala pennanawa**: Discord desktop app eka open da balanna (browser eka nowe). Discord ekai exe ekai ekama permission level eken run karanna (dekama normal). Discord restart karoth ayeth ihimen connect wenawa.
 - **Nama waradi / pennanne nae**: PotPlayer window title eka "film nama - PotPlayer" widiyata thiyenna one. Format eka wenas nam script eke `TITLE_SUFFIX` eka adjust karanna.
 
 ## Danaganna

@@ -1,69 +1,31 @@
 """
-PotPlayer -> Discord Rich Presence
+PotPlayer -> Discord Rich Presence (GUI)
+
 PotPlayer window title eka kiyawala, film/episode nama Discord status ekata yawanawa.
 Windows walata witharai.
 """
 
 import ctypes
-import os
+import queue
 import re
-import sys
+import threading
 import time
+import tkinter as tk
 from ctypes import wintypes
 
 from pypresence import Presence
 
-import json
+# Discord Application ID (secret ekak nemei, public wenna puluwan)
+CLIENT_ID = "1561956752105283635"
 
-# Application ID eka mehema hoyaganna:
-#   1. DISCORD_CLIENT_ID environment variable eka
-#   2. %APPDATA%\PotPlayerRPC\config.json (palaweni wara ahala save karanawa)
-#   3. Nathnam run karaddi ahanawa
-CONFIG_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "PotPlayerRPC")
-CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
-
-
-def load_client_id():
-    env_id = os.environ.get("DISCORD_CLIENT_ID", "").strip()
-    if env_id:
-        return env_id
-    try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            saved = str(json.load(f).get("client_id", "")).strip()
-            if saved:
-                return saved
-    except (OSError, ValueError):
-        pass
-
-    print("Discord Application ID eka thama haduwe nae.")
-    print("(discord.com/developers/applications eken New Application ekak hadala,")
-    print(" nama 'PotPlayer' denna, General Information eke Application ID eka copy karanna)")
-    while True:
-        entered = input("Application ID eka methanata paste karala Enter ebuwa: ").strip()
-        if entered.isdigit() and len(entered) >= 17:
-            break
-        print("Meka waradi wage. ID eka ankayen witharai hadila thiyenna one (17-20 ankaya).")
-    try:
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump({"client_id": entered}, f)
-        print("ID eka save kala. Ita passe aye ahanne nae.")
-    except OSError as exc:
-        print(f"ID eka save karanna ba una ({exc}). Next time aye ahanawa.")
-    return entered
-
-
-CLIENT_ID = None
-
-POLL_SECONDS = 5          # PotPlayer check karana gaman (seconds)
+POLL_SECONDS = 5      # PotPlayer check karana gaman (seconds)
+RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
 TITLE_SUFFIX = " - PotPlayer"
 
+# ---------------------------------------------------------------- Win32 helpers
+
 user32 = ctypes.windll.user32
-EnumWindows = user32.EnumWindows
 EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-GetWindowTextW = user32.GetWindowTextW
-GetWindowTextLengthW = user32.GetWindowTextLengthW
-IsWindowVisible = user32.IsWindowVisible
 
 
 def find_potplayer_title():
@@ -71,91 +33,259 @@ def find_potplayer_title():
     found = []
 
     def callback(hwnd, _lparam):
-        if not IsWindowVisible(hwnd):
+        if not user32.IsWindowVisible(hwnd):
             return True
-        length = GetWindowTextLengthW(hwnd)
+        length = user32.GetWindowTextLengthW(hwnd)
         if length == 0:
             return True
         buf = ctypes.create_unicode_buffer(length + 1)
-        GetWindowTextW(hwnd, buf, length + 1)
+        user32.GetWindowTextW(hwnd, buf, length + 1)
         title = buf.value
         if title.endswith(TITLE_SUFFIX):
             found.append(title[: -len(TITLE_SUFFIX)])
-            return False  # hambuna, nawathinna
+            return False
         return True
 
-    EnumWindows(EnumWindowsProc(callback), 0)
+    user32.EnumWindows(EnumWindowsProc(callback), 0)
     return found[0] if found else None
 
 
 def clean_title(raw):
     """File extension, [tags], dots, underscores ain karala lassana nama ekak hadanawa."""
     name = re.sub(r"\.(mkv|mp4|avi|mov|wmv|flv|webm|m4v|ts)$", "", raw, flags=re.I)
-    name = re.sub(r"[\[\(][^\]\)]*[\]\)]", "", name)   # [1080p] (2020) wage dewal
+    name = re.sub(r"[\[\(][^\]\)]*[\]\)]", "", name)
     name = re.sub(r"[._]+", " ", name)
     name = re.sub(r"\s+", " ", name).strip(" -")
     return name or raw
 
 
-def connect():
-    rpc = Presence(CLIENT_ID)
-    rpc.connect()
-    return rpc
+# ---------------------------------------------------------------- Background worker
+
+class RpcWorker(threading.Thread):
+    """Discord ekata connect wela PotPlayer title eka yawana thread eka."""
+
+    def __init__(self, events):
+        super().__init__(daemon=True)
+        self.events = events
+        self.stop_event = threading.Event()
+
+    def emit(self, kind, text=""):
+        self.events.put((kind, text))
+
+    def run(self):
+        rpc = None
+        last_title = None
+        started_at = None
+
+        while not self.stop_event.is_set():
+            try:
+                if rpc is None:
+                    self.emit("status", "connecting")
+                    rpc = Presence(CLIENT_ID)
+                    rpc.connect()
+                    self.emit("status", "connected")
+
+                raw = find_potplayer_title()
+                if raw is None:
+                    if last_title is not None:
+                        rpc.clear()
+                        last_title = None
+                        self.emit("watching", "")
+                else:
+                    title = clean_title(raw)
+                    if title != last_title:
+                        started_at = int(time.time())
+                        last_title = title
+                        self.emit("watching", title)
+                    rpc.update(
+                        details=title[:128],
+                        state="Watching in PotPlayer",
+                        start=started_at,
+                    )
+            except Exception:
+                # Discord close una / restart una wage welawal
+                try:
+                    if rpc:
+                        rpc.close()
+                except Exception:
+                    pass
+                rpc = None
+                last_title = None
+                self.emit("status", "error")
+                self.emit("watching", "")
+                self.stop_event.wait(RETRY_SECONDS)
+                continue
+
+            self.stop_event.wait(POLL_SECONDS)
+
+        try:
+            if rpc:
+                rpc.clear()
+                rpc.close()
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------- GUI
+
+BG = "#1e1f22"
+CARD = "#2b2d31"
+TEXT = "#f2f3f5"
+MUTED = "#949ba4"
+ACCENT = "#5865f2"
+ACCENT_HOVER = "#4752c4"
+RED = "#da373c"
+RED_HOVER = "#a12828"
+GREEN = "#23a55a"
+YELLOW = "#f0b232"
+ERROR = "#f23f43"
+
+STATUS = {
+    "connecting": ("Connecting to Discord...", YELLOW),
+    "connected": ("Connected to Discord", GREEN),
+    "error": ("Discord not found, retrying...", ERROR),
+    "stopped": ("Stopped", MUTED),
+}
+
+
+class App:
+    def __init__(self, root):
+        self.root = root
+        self.events = queue.Queue()
+        self.worker = None
+        self.watch_started = None
+
+        root.title("PotPlayer RPC")
+        root.geometry("380x340")
+        root.resizable(False, False)
+        root.configure(bg=BG)
+
+        tk.Label(root, text="PotPlayer RPC", bg=BG, fg=TEXT,
+                 font=("Segoe UI", 18, "bold")).pack(pady=(18, 2))
+        tk.Label(root, text="Show what you're watching on Discord", bg=BG, fg=MUTED,
+                 font=("Segoe UI", 10)).pack()
+
+        # status row
+        status_row = tk.Frame(root, bg=BG)
+        status_row.pack(pady=(16, 8))
+        self.dot = tk.Canvas(status_row, width=12, height=12, bg=BG, highlightthickness=0)
+        self.dot_item = self.dot.create_oval(1, 1, 11, 11, fill=MUTED, outline="")
+        self.dot.pack(side="left", padx=(0, 8))
+        self.status_label = tk.Label(status_row, text="Stopped", bg=BG, fg=TEXT,
+                                     font=("Segoe UI", 10, "bold"))
+        self.status_label.pack(side="left")
+
+        # now watching card
+        card = tk.Frame(root, bg=CARD, padx=16, pady=14)
+        card.pack(fill="x", padx=24)
+        tk.Label(card, text="NOW WATCHING", bg=CARD, fg=MUTED,
+                 font=("Segoe UI", 8, "bold"), anchor="w").pack(fill="x")
+        self.title_label = tk.Label(card, text="Nothing playing", bg=CARD, fg=TEXT,
+                                    font=("Segoe UI", 12, "bold"), anchor="w",
+                                    justify="left", wraplength=310)
+        self.title_label.pack(fill="x", pady=(6, 4))
+        self.elapsed_label = tk.Label(card, text="", bg=CARD, fg=MUTED,
+                                      font=("Segoe UI", 9), anchor="w")
+        self.elapsed_label.pack(fill="x")
+
+        # start / stop button
+        self.button = tk.Button(root, text="Start", command=self.toggle, bg=ACCENT, fg="white",
+                                activebackground=ACCENT_HOVER, activeforeground="white",
+                                relief="flat", bd=0, cursor="hand2",
+                                font=("Segoe UI", 11, "bold"), width=18, pady=8)
+        self.button.pack(pady=(18, 8))
+
+        tk.Label(root, text="Keep Discord (desktop app) open while using this.",
+                 bg=BG, fg=MUTED, font=("Segoe UI", 8)).pack()
+
+        root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.after(200, self.process_events)
+        self.root.after(1000, self.tick)
+
+        self.start()   # open karanakotama auto-start
+
+    # -- state ---------------------------------------------------------------
+
+    def set_status(self, key):
+        text, color = STATUS[key]
+        self.status_label.config(text=text)
+        self.dot.itemconfig(self.dot_item, fill=color)
+
+    def set_watching(self, title):
+        if title:
+            self.title_label.config(text=title)
+            self.watch_started = time.time()
+        else:
+            self.title_label.config(text="Nothing playing")
+            self.watch_started = None
+            self.elapsed_label.config(text="")
+
+    def running(self):
+        return self.worker is not None
+
+    def start(self):
+        if self.running():
+            return
+        self.worker = RpcWorker(self.events)
+        self.worker.start()
+        self.button.config(text="Stop", bg=RED, activebackground=RED_HOVER)
+        self.set_status("connecting")
+
+    def stop(self):
+        if not self.running():
+            return
+        self.worker.stop_event.set()
+        self.worker.join(timeout=3)
+        self.worker = None
+        # parana events ain karanna
+        while not self.events.empty():
+            try:
+                self.events.get_nowait()
+            except queue.Empty:
+                break
+        self.button.config(text="Start", bg=ACCENT, activebackground=ACCENT_HOVER)
+        self.set_status("stopped")
+        self.set_watching("")
+
+    def toggle(self):
+        if self.running():
+            self.stop()
+        else:
+            self.start()
+
+    def on_close(self):
+        self.stop()
+        self.root.destroy()
+
+    # -- periodic jobs --------------------------------------------------------
+
+    def process_events(self):
+        try:
+            while True:
+                kind, text = self.events.get_nowait()
+                if not self.running():
+                    continue
+                if kind == "status":
+                    self.set_status(text)
+                elif kind == "watching":
+                    self.set_watching(text)
+        except queue.Empty:
+            pass
+        self.root.after(200, self.process_events)
+
+    def tick(self):
+        if self.watch_started is not None:
+            secs = int(time.time() - self.watch_started)
+            h, rem = divmod(secs, 3600)
+            m, s = divmod(rem, 60)
+            self.elapsed_label.config(text=f"Elapsed {h}:{m:02d}:{s:02d}")
+        self.root.after(1000, self.tick)
 
 
 def main():
-    global CLIENT_ID
-    CLIENT_ID = load_client_id()
-
-    rpc = None
-    last_title = None
-    started_at = None
-
-    print("PotPlayer RPC wada karanawa. Nawathinna Ctrl+C.")
-    while True:
-        try:
-            if rpc is None:
-                rpc = connect()
-                print("Discord ekata connect una.")
-
-            raw = find_potplayer_title()
-
-            if raw is None:
-                if last_title is not None:
-                    rpc.clear()
-                    last_title = None
-                    print("PotPlayer nadda / film nadda. Status eka clear kala.")
-            else:
-                title = clean_title(raw)
-                if title != last_title:
-                    started_at = int(time.time())
-                    last_title = title
-                    print(f"Now watching: {title}")
-                rpc.update(
-                    details=title[:128],
-                    state="Watching in PotPlayer",
-                    start=started_at,
-                )
-        except KeyboardInterrupt:
-            break
-        except Exception as exc:  # Discord close una wage welawal reconnect karanna
-            print(f"Error: {exc}. Tikakin passe aye try karanawa...")
-            try:
-                if rpc:
-                    rpc.close()
-            except Exception:
-                pass
-            rpc = None
-            last_title = None
-
-        time.sleep(POLL_SECONDS)
-
-    try:
-        if rpc:
-            rpc.clear()
-            rpc.close()
-    except Exception:
-        pass
+    root = tk.Tk()
+    App(root)
+    root.mainloop()
 
 
 if __name__ == "__main__":
