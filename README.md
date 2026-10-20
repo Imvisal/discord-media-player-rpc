@@ -4,6 +4,11 @@
 
 Windows only. No Python, no API keys, no setup: download the exe and run it.
 
+<p align="center">
+  <img src="assets/preview.png" alt="Media RPC showing a film as a Watching card on a Discord profile" width="300">
+</p>
+<p align="center"><sub>Example: a film playing in PotPlayer, shown on a Discord profile.</sub></p>
+
 ## Features
 
 - **Automatic detection.** Reads the player's window title and works out whether it's a film or a series episode.
