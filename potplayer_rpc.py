@@ -1,11 +1,12 @@
 """
 PotPlayer -> Discord Rich Presence (GUI)
 
-PotPlayer window title eka kiyawala, film/episode nama Discord status ekata yawanawa.
-Windows walata witharai.
+PotPlayer window title eka kiyawala, film / TV series episode eka hoyagena
+poster ekka Discord status ekata yawanawa. Windows walata witharai.
 """
 
 import ctypes
+import inspect
 import queue
 import re
 import threading
@@ -15,12 +16,25 @@ from ctypes import wintypes
 
 from pypresence import Presence
 
+import media_info
+
+try:
+    from pypresence import ActivityType
+except ImportError:           # pypresence passe version walata witharai thiyenne
+    ActivityType = None
+try:
+    from pypresence import StatusDisplayType
+except ImportError:
+    StatusDisplayType = None
+
 # Discord Application ID (secret ekak nemei, public wenna puluwan)
 CLIENT_ID = "1561956752105283635"
 
 POLL_SECONDS = 5      # PotPlayer check karana gaman (seconds)
 RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
 TITLE_SUFFIX = " - PotPlayer"
+
+UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
 
 # ---------------------------------------------------------------- Win32 helpers
 
@@ -50,13 +64,28 @@ def find_potplayer_title():
     return found[0] if found else None
 
 
-def clean_title(raw):
-    """File extension, [tags], dots, underscores ain karala lassana nama ekak hadanawa."""
-    name = re.sub(r"\.(mkv|mp4|avi|mov|wmv|flv|webm|m4v|ts)$", "", raw, flags=re.I)
-    name = re.sub(r"[\[\(][^\]\)]*[\]\)]", "", name)
-    name = re.sub(r"[._]+", " ", name)
-    name = re.sub(r"\s+", " ", name).strip(" -")
-    return name or raw
+# ---------------------------------------------------------------- Discord activity
+
+def build_activity(media, started_at):
+    details = media.display_title()
+    state = media.subtitle()
+    kwargs = {
+        "details": details[:128].ljust(2),
+        "state": state[:128].ljust(2),
+        "start": started_at,
+    }
+    if media.poster and len(media.poster) <= 256:
+        kwargs["large_image"] = media.poster
+        kwargs["large_text"] = details[:128].ljust(2)
+    # "Watching ..." card eka (Crunchyroll wage) pennanna
+    if ActivityType is not None and "activity_type" in UPDATE_PARAMS:
+        kwargs["activity_type"] = ActivityType.WATCHING
+    # Member list eke "PotPlayer" wenuwata film nama pennanna
+    if StatusDisplayType is not None and "status_display_type" in UPDATE_PARAMS:
+        details_mode = getattr(StatusDisplayType, "DETAILS", None)
+        if details_mode is not None:
+            kwargs["status_display_type"] = details_mode
+    return kwargs
 
 
 # ---------------------------------------------------------------- Background worker
@@ -69,12 +98,13 @@ class RpcWorker(threading.Thread):
         self.events = events
         self.stop_event = threading.Event()
 
-    def emit(self, kind, text=""):
-        self.events.put((kind, text))
+    def emit(self, kind, payload=None):
+        self.events.put((kind, payload))
 
     def run(self):
         rpc = None
-        last_title = None
+        last_raw = None
+        media = None
         started_at = None
 
         while not self.stop_event.is_set():
@@ -87,21 +117,19 @@ class RpcWorker(threading.Thread):
 
                 raw = find_potplayer_title()
                 if raw is None:
-                    if last_title is not None:
+                    if last_raw is not None:
                         rpc.clear()
-                        last_title = None
-                        self.emit("watching", "")
+                        last_raw = None
+                        media = None
+                        self.emit("watching", None)
                 else:
-                    title = clean_title(raw)
-                    if title != last_title:
+                    if raw != last_raw:
+                        # parse + poster hoyanna (palaweni wara tikak welawak yanawa)
+                        media = media_info.resolve(raw)
                         started_at = int(time.time())
-                        last_title = title
-                        self.emit("watching", title)
-                    rpc.update(
-                        details=title[:128],
-                        state="Watching in PotPlayer",
-                        start=started_at,
-                    )
+                        last_raw = raw
+                        self.emit("watching", media)
+                    rpc.update(**build_activity(media, started_at))
             except Exception:
                 # Discord close una / restart una wage welawal
                 try:
@@ -110,9 +138,10 @@ class RpcWorker(threading.Thread):
                 except Exception:
                     pass
                 rpc = None
-                last_title = None
+                last_raw = None
+                media = None
                 self.emit("status", "error")
-                self.emit("watching", "")
+                self.emit("watching", None)
                 self.stop_event.wait(RETRY_SECONDS)
                 continue
 
@@ -156,7 +185,7 @@ class App:
         self.watch_started = None
 
         root.title("PotPlayer RPC")
-        root.geometry("380x340")
+        root.geometry("380x370")
         root.resizable(False, False)
         root.configure(bg=BG)
 
@@ -183,10 +212,17 @@ class App:
         self.title_label = tk.Label(card, text="Nothing playing", bg=CARD, fg=TEXT,
                                     font=("Segoe UI", 12, "bold"), anchor="w",
                                     justify="left", wraplength=310)
-        self.title_label.pack(fill="x", pady=(6, 4))
+        self.title_label.pack(fill="x", pady=(6, 2))
+        self.sub_label = tk.Label(card, text="", bg=CARD, fg=TEXT,
+                                  font=("Segoe UI", 10), anchor="w",
+                                  justify="left", wraplength=310)
+        self.sub_label.pack(fill="x")
+        self.poster_label = tk.Label(card, text="", bg=CARD, fg=MUTED,
+                                     font=("Segoe UI", 8), anchor="w")
+        self.poster_label.pack(fill="x", pady=(4, 0))
         self.elapsed_label = tk.Label(card, text="", bg=CARD, fg=MUTED,
                                       font=("Segoe UI", 9), anchor="w")
-        self.elapsed_label.pack(fill="x")
+        self.elapsed_label.pack(fill="x", pady=(2, 0))
 
         # start / stop button
         self.button = tk.Button(root, text="Start", command=self.toggle, bg=ACCENT, fg="white",
@@ -211,14 +247,20 @@ class App:
         self.status_label.config(text=text)
         self.dot.itemconfig(self.dot_item, fill=color)
 
-    def set_watching(self, title):
-        if title:
-            self.title_label.config(text=title)
+    def set_watching(self, media):
+        if media is not None:
+            self.title_label.config(text=media.display_title())
+            self.sub_label.config(text=media.subtitle())
+            self.poster_label.config(
+                text="Poster found" if media.poster else "No poster found (title only)"
+            )
             self.watch_started = time.time()
         else:
             self.title_label.config(text="Nothing playing")
-            self.watch_started = None
+            self.sub_label.config(text="")
+            self.poster_label.config(text="")
             self.elapsed_label.config(text="")
+            self.watch_started = None
 
     def running(self):
         return self.worker is not None
@@ -245,7 +287,7 @@ class App:
                 break
         self.button.config(text="Start", bg=ACCENT, activebackground=ACCENT_HOVER)
         self.set_status("stopped")
-        self.set_watching("")
+        self.set_watching(None)
 
     def toggle(self):
         if self.running():
@@ -262,13 +304,13 @@ class App:
     def process_events(self):
         try:
             while True:
-                kind, text = self.events.get_nowait()
+                kind, payload = self.events.get_nowait()
                 if not self.running():
                     continue
                 if kind == "status":
-                    self.set_status(text)
+                    self.set_status(payload)
                 elif kind == "watching":
-                    self.set_watching(text)
+                    self.set_watching(payload)
         except queue.Empty:
             pass
         self.root.after(200, self.process_events)

@@ -14,6 +14,14 @@ Window eke:
 - **Now watching** eke dan play wena film eka saha kiyak welawak balala thiyenawada kiyala pennanawa.
 - **Stop / Start** button eken status eka off/on karanna puluwan. Window eka close karaddi status eka clear wenawa.
 
+## Poster / episode detect wenne kohomada
+- File nama eken (`The_Mentalist_S01E01_...mkv`, `Inception.2010.1080p...`, `Show - 05`) series ekakda film ekakda kiyala hoyaganna, quality/release tags (720p, x265, BluRay wage) ain karanawa.
+- **TV series**: TVmaze walin (API key one nae) show eke poster eka, ona nam episode eke nama ganna.
+- **Film**: iTunes Search walin (API key one nae) poster eka ganna.
+- Discord eke "Watching ..." card ekak widiyata poster ekka pennanawa. Internet nathnam / hoyaganna ba unoth poster nathuwa nama witharak pennanawa.
+- Nama waradiyata hoyaganna unoth (udaharana: file eke nama wenas) `media_info.py` eke `parse_filename` eka balanna.
+- Elapsed time eka pennanne, progress bar ekak nemei (PotPlayer eken play wena thana ganna ba).
+
 > Windows SmartScreen "unrecognized app" kiyala pennuwoth **More info > Run anyway**. Meka unsigned app ekak nisa enawa.
 
 ## Python walin run karanna
