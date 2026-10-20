@@ -1,6 +1,6 @@
-# Media RPC
+# Media RPC: Discord Rich Presence for PotPlayer, VLC, MPC-HC and more
 
-**Show what you're watching on Discord.** Media RPC detects the film or TV episode playing in your video player and displays it on your Discord profile as a **"Watching ..."** card, complete with poster, season and episode, and episode title.
+**Show what you're watching on Discord.** Media RPC is a free Discord Rich Presence app for Windows. It detects the film or TV episode playing in your video player (PotPlayer, VLC, KMPlayer, MPC-HC, MPC-BE, SMPlayer, mpv, GOM Player) and displays it on your Discord profile as a **"Watching ..."** card, complete with poster, season and episode, and episode title.
 
 Windows only. No Python, no API keys, no setup: download the exe and run it.
 
