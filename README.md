@@ -38,6 +38,13 @@ Window eke:
 - Nama waradiyata hoyaganna unoth `media_info.py` eke `parse_filename` eka balanna.
 - Elapsed time eka pennanne, progress bar ekak nemei (player eke play wena thana window title eken ganna ba).
 
+## Discord card eke buttons
+Card eke yatin buttons 2k pennanawa (Steam eke "Get on Steam" wage):
+- **View on TVmaze** (series) / **View on Apple TV** (film): show/film eke page eka. Hoyaganna ba unoth meka pennanne nae.
+- **Get Media RPC**: me project eke GitHub page eka. Nama / link eka `media_rpc.py` eke `PROJECT_BUTTON` / `PROJECT_URL` walin wenas karanna.
+
+> Buttons pennanne **anith aya** witharai. Oyage own profile eke oya ta eka penne nae (Discord eke rule ekak). Anith kenek oya balana film eka profile eken balanakota penawa.
+
 ## Player ekak aluthen add karanna
 `players.py` eke `PLAYERS` list ekata line ekak add karanna: player eke nama, exe eke patan ganna akuru, saha window title eke player eke nama (regex).
 

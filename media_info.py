@@ -44,6 +44,8 @@ class Media:
     episode: Optional[int] = None
     episode_title: Optional[str] = None
     poster: Optional[str] = None
+    info_url: Optional[str] = None      # Discord button eka yana page eka (TVmaze / Apple TV)
+    info_label: Optional[str] = None    # button eke nama
 
     @property
     def is_series(self):
@@ -133,6 +135,8 @@ def _tvmaze(media):
         media,
         title=show.get("name") or media.title,
         poster=image.get("original") or image.get("medium"),
+        info_url=show.get("url"),
+        info_label="View on TVmaze",
     )
     if media.season is not None and media.episode is not None:
         try:
@@ -168,6 +172,8 @@ def _itunes_movie(media):
         media,
         title=pick.get("trackName") or media.title,
         poster=art.replace("100x100bb", "600x600bb"),
+        info_url=pick.get("trackViewUrl"),
+        info_label="View on Apple TV",
     )
 
 

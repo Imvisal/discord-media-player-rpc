@@ -42,6 +42,11 @@ except ImportError:
 CLIENT_ID = "1561956752105283635"
 
 APP_TITLE = "Media RPC"
+
+# Discord card eke "Get Media RPC" button eka yana link eka (Steam eke "Get on Steam" wage).
+# Repo eka rename kalath old link eka GitHub eken redirect karanawa.
+PROJECT_URL = "https://github.com/Imvisal/potplayer-discord-rpc"
+PROJECT_BUTTON = "Get Media RPC"
 POLL_SECONDS = 5      # player check karana gaman (seconds)
 RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
 
@@ -61,6 +66,13 @@ def build_activity(media, started_at, player_name):
     if media.poster and len(media.poster) <= 256:
         kwargs["large_image"] = media.poster
         kwargs["large_text"] = f"{details} · {player_name}"[:128]
+    # Card eke yata button 2k (max 2): film/show page eka + app eka download karanna
+    if "buttons" in UPDATE_PARAMS:
+        buttons = []
+        if media.info_url and media.info_label and len(media.info_url) <= 512:
+            buttons.append({"label": media.info_label[:32], "url": media.info_url})
+        buttons.append({"label": PROJECT_BUTTON, "url": PROJECT_URL})
+        kwargs["buttons"] = buttons[:2]
     # "Watching ..." card eka (Crunchyroll wage) pennanna
     if ActivityType is not None and "activity_type" in UPDATE_PARAMS:
         kwargs["activity_type"] = ActivityType.WATCHING
