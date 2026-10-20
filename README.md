@@ -1,76 +1,125 @@
-# Media RPC (Discord Rich Presence for video players)
+# Media RPC
 
-Oyage PC eke video player eken play wenna film / TV series episode eka Discord profile eke pennanna hadapu app ekak. Poster eka, season/episode eka, episode nama (series walata) saha "Watching ..." card ekak widiyata pennanawa. **Windows walata witharai.**
+**Show what you're watching on Discord.** Media RPC detects the film or TV episode playing in your video player and displays it on your Discord profile as a **"Watching ..."** card, complete with poster, season and episode, and episode title.
 
-## Support karana players
-PotPlayer, VLC, KMPlayer, MPC-HC, MPC-BE, SMPlayer, mpv, GOM Player
+Windows only. No Python, no API keys, no setup: download the exe and run it.
 
-(Windows Media Player / Windows 11 "Media Player" app eke window title ekata film nama enne nae, nisa eka detect karanna ba.)
+## Features
 
-## Use karanna (Python one nae, ona PC ekaka wada karanawa)
+- **Automatic detection.** Reads the player's window title and works out whether it's a film or a series episode.
+- **Posters and episode names.** Fetched automatically from TVmaze, iTunes, IMDb and Wikipedia.
+- **Smart filename cleanup.** Strips release noise such as `1080p`, `x265`, `BluRay`, `English`, `Sinhala Sub` and site tags like `[CineSubz.com]`.
+- **Safe matching.** A poster is only used when the title (and year) really match your file, so you never get the wrong film's artwork.
+- **System tray.** Closing the window keeps the app running quietly in the tray.
+- **Start with Windows.** Optional auto-start, minimized to the tray.
+- **One instance only.** Opening it twice just tells you it's already running.
 
-1. **Releases** page eken latest `MediaRPC.exe` eka download karanna.
-2. Hari thanakata (udaharana: `C:\Apps\MediaRPC\`) damma passe double-click karanna. (Auto-start wenne exe eka thiyena thana eken.)
-3. Discord **desktop app** eka open karala thiyenna.
-4. Oyage player eke film ekak play karanna. Discord profile eke film eke nama poster ekka pennanawa.
+## Supported players
 
-Meka wada karanna ona de: Windows + Discord desktop app witharai. Application ID eka app eka ethule thiyenawa, ayema hadanna one nae. Ona kenekta meka copy karala wena PC ekakath run karanna puluwan.
+PotPlayer, VLC, KMPlayer, MPC-HC, MPC-BE, SMPlayer, mpv and GOM Player.
 
-Window eke:
-- **Status** (Connected / Discord not found) pennanawa.
-- **Now watching** eke player eke nama, film/series eka, poster hamba una da, kiyak welawak balala thiyenawada kiyala pennanawa.
-- **Stop / Start** button eken status eka off/on karanna puluwan.
+> Windows Media Player and the Windows 11 "Media Player" app don't put the film name in their window title, so they can't be detected.
 
-> Windows SmartScreen "unrecognized app" kiyala pennuwoth **More info > Run anyway**. Meka unsigned app ekak nisa enawa.
+## Quick start
 
-## System tray saha auto-start
-- Window eke **X** click karama app eka close wenne nae, **system tray** ekata (clock eka langa ^ arrow eka) yanawa. Dan wath wada karanawa.
-- Tray icon eka **double-click** karoth window eka aye pennanawa. **Right-click** karoth menu eka: Show window, Start/Stop, Start with Windows, **Quit**. Hari ekata app eka nawathinna **Quit** use karanna.
-- **Start with Windows** (window eke checkbox eka ho tray menu eka): PC eka on wenakota app eka tray ekata ihimen start wenawa. Palaweni wara app eka run karaddi meka ihimen **ON** wenawa, ona nam off karanna.
-- Exe eka aye wena thanakata move karoth, "Start with Windows" off/on karanna.
-- App eka dekak ekawara run wenne nae. Aye open karoth "already running" kiyala pennanawa.
+1. Download the latest `MediaRPC.exe` from the **Releases** page.
+2. Put it somewhere permanent (for example `C:\Apps\MediaRPC\`) and double-click it. *"Start with Windows" uses the location of the exe, so don't move it afterwards without toggling the option off and on.*
+3. Keep the **Discord desktop app** open.
+4. Play a film or episode in your player. It now shows on your Discord profile.
 
-## Poster / episode detect wenne kohomada
-- File nama eken (`The_Mentalist_S01E01_...mkv`, `Inception.2010.1080p...`, `Show - 05`) series ekakda film ekakda kiyala hoyaganna, quality/release tags (720p, x265, BluRay wage), bhasha tags (English, Sinhala Sub wage) saha site tags (`[CineSubz.com]` wage) ain karanawa.
-- **TV series**: TVmaze, nathnam IMDb walin (API key one nae) poster eka, TVmaze walin episode eke nama ganna.
-- **Film**: iTunes Search, nathnam IMDb, nathnam Wikipedia walin (API key one nae) poster eka ganna.
-- Hoyagaththa nama file eke namata hariyatama samana nam (ilakkam, year ekka) witharai poster eka denne. Samana nathnam wen film / series ekak pennanawata wada poster nathuwa file eke nama witharak pennanawa.
-- Discord eke "Watching ..." card ekak widiyata poster ekka pennanawa. Internet nathnam / hoyaganna ba unoth poster nathuwa nama witharak pennanawa. Poster nathnam tika welawakin (30s) aye hoyala balanawa.
-- Poster nathi welawata "?" wenuwata ona image ekak pennanna: Discord Developer Portal > oyage application > **Rich Presence > Art Assets** walata `default_poster` kiyana nama image ekak upload karanna.
-- Nama waradiyata hoyaganna unoth `media_info.py` eke `parse_filename` eka balanna.
-- Elapsed time eka pennanne, progress bar ekak nemei (player eke play wena thana window title eken ganna ba).
+You only need Windows and the Discord desktop app. The Discord Application ID is built in, so there's nothing to create or configure, and you can copy the exe to other PCs.
 
-## Discord card eke buttons
-Card eke yatin button ekak pennanawa (Steam eke "Get on Steam" wage): **Get Media RPC**, me project eke GitHub page ekata yanawa. Nama / link eka `media_rpc.py` eke `PROJECT_BUTTON` / `PROJECT_URL` walin wenas karanna.
+> **Windows SmartScreen** may warn about an "unrecognized app" because the exe isn't code-signed. Click **More info > Run anyway**.
 
-> Buttons pennanne **anith aya** witharai. Oyage own profile eke oya ta eka penne nae (Discord eke rule ekak). Anith kenek oya balana film eka profile eken balanakota penawa.
+### The app window
 
-## Player ekak aluthen add karanna
-`players.py` eke `PLAYERS` list ekata line ekak add karanna: player eke nama, exe eke patan ganna akuru, saha window title eke player eke nama (regex).
+- **Status**: Connected, or "Discord not found, retrying...".
+- **Now watching**: the player, the detected title, whether a poster was found, and elapsed time.
+- **Start / Stop**: switch the presence off and on.
+
+### System tray
+
+- Closing the window with **X** minimizes Media RPC to the system tray (the `^` arrow next to the clock).
+- **Double-click** the tray icon to reopen the window. **Right-click** for: Show window, Start/Stop, Start with Windows, **Quit**.
+- Use **Quit** from the tray menu to fully close the app.
+- **Start with Windows** turns on by default the first time you run the app. You can switch it off in the window or the tray menu.
+
+## How detection works
+
+| Step | What happens |
+| --- | --- |
+| 1. Find the player | Looks for a supported player window and reads its title. |
+| 2. Parse the name | Handles `S01E01`, `1x01`, `Show - 05`, `Title (2025)`, `Title.2010.1080p...` and similar. Quality, language and site tags are removed. |
+| 3. Look up artwork | **Series:** TVmaze, then IMDb. **Films:** iTunes, then IMDb, then Wikipedia. Episode names come from TVmaze. |
+| 4. Show the card | Sent to Discord as a "Watching" activity with the poster as the large image. |
+
+Good to know:
+
+- Lookups use only the cleaned-up title (and year); nothing else about your system or files is sent.
+- If no confident match is found, or you're offline, the card shows just the title. Media RPC retries about every 30 seconds.
+- If a title is detected wrongly, check `parse_filename` in `media_info.py`.
+- Elapsed time starts when the title is detected. Players don't expose playback position through the window title, so there's no progress bar.
+
+## The "Get Media RPC" button
+
+The card includes a **Get Media RPC** button linking to this repository. Change the label or link with `PROJECT_BUTTON` and `PROJECT_URL` in `media_rpc.py`.
+
+> Discord only shows Rich Presence buttons to **other people**, never on your own profile. To check it works, ask a friend to open your profile (on the desktop app) while you're watching, or use a second account.
+
+## Customization
+
+### Add a player
+
+Add a line to the `PLAYERS` list in `players.py`: a display name, the start of the process's exe name (lowercase), and a regex for the player name as it appears in the window title.
 
 ```python
 Player("MyPlayer", ("myplayer",), r"MyPlayer"),
 ```
 
-## Discord eke pennana nama wenas karanna
-Discord eke card eke "Watching **...**" kiyala pennanne **Discord Application** eke nama. https://discord.com/developers/applications > oyage application > **General Information** > **Name** eka (udaharana: "Media Player") wenas karanna. Application ID eka wenas wenne nae.
+### Change the name shown on the card
 
-## Python walin run karanna / exe eka hadanna
+The text after "Watching" is the name of the **Discord Application**. Open the [Discord Developer Portal](https://discord.com/developers/applications), pick your application, then go to **General Information > Name** and rename it (for example "Media Player"). The Application ID stays the same.
+
+### Show an image when there is no poster
+
+When no poster is found Discord shows a "?" placeholder. To replace it, upload an image named `default_poster` under **Rich Presence > Art Assets** in the Developer Portal. It is used automatically.
+
+## Run from source
+
+Requires Windows and Python 3.
 
 ```
 pip install -r requirements.txt
 python media_rpc.py
 ```
 
-`v` walin patan gannawa tag ekak (udaharanayak: `v1.4.0`) GitHub eke **Releases > Draft a new release** eken publish karama GitHub Actions walin `MediaRPC.exe` build wela **Releases** ekata add wenawa. Tag nathuwa **Actions > Build Windows exe > Run workflow** kalath, build eka **Artifacts** wala download karanna puluwan.
+To use your own Discord Application, change `CLIENT_ID` in `media_rpc.py`.
 
-Application ID eka wenas karanna ona nam `media_rpc.py` eke `CLIENT_ID` eka wenas karanna.
+## Build the exe
 
-## Prashna awoth
-- **Discord eke pennanne nae**: Settings > Activity Privacy > "Share your detected activity" ON da balanna.
-- **"Discord not found, retrying..." kiyala pennanawa**: Discord desktop app eka open da balanna (browser eka nowe). Discord ekai exe ekai ekama permission level eken run karanna (dekama normal). Discord restart karoth ayeth ihimen connect wenawa.
-- **Player eka detect wenne nae**: Window title eka "film nama - Player nama" widiyata thiyenna one, nathnam film eke file nama (extension ekka) witharak title eke thiyenna one. Player eka `players.py` eke list eke thiyenawada balanna.
+Pushing a tag that starts with `v` (for example `v1.5.0`), or publishing a release in **Releases > Draft a new release**, triggers GitHub Actions to build `MediaRPC.exe` and attach it to the release.
 
-## Danaganna
-- Film eka pause karama hari status eka thiyenawa (window title eken pause detect karanna ba).
-- Windows walata witharai wada karanne.
+Without a tag, run **Actions > Build Windows exe > Run workflow** and download the result from **Artifacts**.
+
+## Project layout
+
+| File | Purpose |
+| --- | --- |
+| `media_rpc.py` | App window, tray and the Discord Rich Presence worker |
+| `media_info.py` | Filename parsing and poster / episode lookup |
+| `players.py` | Supported players and window-title detection |
+| `system_integration.py` | Start with Windows and single-instance handling |
+| `app_icon.py` | Generates the app icon |
+
+## Troubleshooting
+
+- **Nothing shows on Discord:** open Discord **Settings > Activity Privacy** and make sure **Share your detected activity** is on.
+- **"Discord not found, retrying...":** make sure the Discord **desktop app** is running (not just the browser). Discord and Media RPC should run with the same permission level (both normal, not one as administrator). It reconnects automatically after a Discord restart.
+- **Player not detected:** the window title must look like `film name - Player name`, or be just the file name with its extension. Check that your player is in the list in `players.py`.
+- **Wrong or missing poster:** see "How detection works" above. A title with an unusual name may need a fix in `media_info.py`.
+
+## Limitations
+
+- Windows only.
+- Pausing a film doesn't change the status, because the window title doesn't reveal pause state.
+- No progress bar (see above).
