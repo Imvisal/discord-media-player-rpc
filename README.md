@@ -31,10 +31,12 @@ Window eke:
 - App eka dekak ekawara run wenne nae. Aye open karoth "already running" kiyala pennanawa.
 
 ## Poster / episode detect wenne kohomada
-- File nama eken (`The_Mentalist_S01E01_...mkv`, `Inception.2010.1080p...`, `Show - 05`) series ekakda film ekakda kiyala hoyaganna, quality/release tags (720p, x265, BluRay wage) ain karanawa.
-- **TV series**: TVmaze walin (API key one nae) show eke poster eka, ona nam episode eke nama ganna.
-- **Film**: iTunes Search walin (API key one nae) poster eka ganna.
-- Discord eke "Watching ..." card ekak widiyata poster ekka pennanawa. Internet nathnam / hoyaganna ba unoth poster nathuwa nama witharak pennanawa.
+- File nama eken (`The_Mentalist_S01E01_...mkv`, `Inception.2010.1080p...`, `Show - 05`) series ekakda film ekakda kiyala hoyaganna, quality/release tags (720p, x265, BluRay wage), bhasha tags (English, Sinhala Sub wage) saha site tags (`[CineSubz.com]` wage) ain karanawa.
+- **TV series**: TVmaze, nathnam IMDb walin (API key one nae) poster eka, TVmaze walin episode eke nama ganna.
+- **Film**: iTunes Search, nathnam IMDb, nathnam Wikipedia walin (API key one nae) poster eka ganna.
+- Hoyagaththa nama file eke namata hariyatama samana nam (ilakkam, year ekka) witharai poster eka denne. Samana nathnam wen film / series ekak pennanawata wada poster nathuwa file eke nama witharak pennanawa.
+- Discord eke "Watching ..." card ekak widiyata poster ekka pennanawa. Internet nathnam / hoyaganna ba unoth poster nathuwa nama witharak pennanawa. Poster nathnam tika welawakin (30s) aye hoyala balanawa.
+- Poster nathi welawata "?" wenuwata ona image ekak pennanna: Discord Developer Portal > oyage application > **Rich Presence > Art Assets** walata `default_poster` kiyana nama image ekak upload karanna.
 - Nama waradiyata hoyaganna unoth `media_info.py` eke `parse_filename` eka balanna.
 - Elapsed time eka pennanne, progress bar ekak nemei (player eke play wena thana window title eken ganna ba).
 

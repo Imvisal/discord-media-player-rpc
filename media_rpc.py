@@ -44,11 +44,15 @@ CLIENT_ID = "1561956752105283635"
 APP_TITLE = "Media RPC"
 
 # Discord card eke "Get Media RPC" button eka yana link eka (Steam eke "Get on Steam" wage).
-# Repo eka rename kalath old link eka GitHub eken redirect karanawa.
-PROJECT_URL = "https://github.com/Imvisal/potplayer-discord-rpc"
+PROJECT_URL = "https://github.com/Imvisal/discord-media-player-rpc"
 PROJECT_BUTTON = "Get Media RPC"
+# Poster nathi welawata pennana image eka: Discord Developer Portal > oyage application >
+# Rich Presence > Art Assets walata "default_poster" kiyana nama image ekak upload karanna.
+# Upload karala nathnam Discord eka "?" pennanawa (kalin wage).
+FALLBACK_IMAGE = "default_poster"
 POLL_SECONDS = 5      # player check karana gaman (seconds)
 RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
+POSTER_RETRY_SECONDS = 30   # poster nathnam aye hoyala balana gaman (seconds)
 
 UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
 
@@ -65,6 +69,9 @@ def build_activity(media, started_at, player_name):
     }
     if media.poster and len(media.poster) <= 256:
         kwargs["large_image"] = media.poster
+        kwargs["large_text"] = f"{details} · {player_name}"[:128]
+    elif FALLBACK_IMAGE:
+        kwargs["large_image"] = FALLBACK_IMAGE
         kwargs["large_text"] = f"{details} · {player_name}"[:128]
     # Card eke yata "Get Media RPC" button eka (Discord eka button 2k wenakan danna puluwan)
     if "buttons" in UPDATE_PARAMS:
@@ -99,6 +106,7 @@ class RpcWorker(threading.Thread):
         media = None
         player_name = ""
         started_at = None
+        last_lookup = 0.0
 
         while not self.stop_event.is_set():
             try:
@@ -123,7 +131,17 @@ class RpcWorker(threading.Thread):
                         media = media_info.resolve(raw)
                         started_at = int(time.time())
                         last_key = key
+                        last_lookup = time.time()
                         self.emit("watching", (media, player_name))
+                    elif (not media.poster
+                          and time.time() - last_lookup >= POSTER_RETRY_SECONDS):
+                        # poster hambuna nae: network fail wela wage nam aye try karanna
+                        # (media_info eke cache eka nisa hamadama network ekata yanne nae)
+                        last_lookup = time.time()
+                        retry = media_info.resolve(raw)
+                        if retry != media:
+                            media = retry
+                            self.emit("watching", (media, player_name))
                     rpc.update(**build_activity(media, started_at, player_name))
             except Exception:
                 # Discord close una / restart una wage welawal
