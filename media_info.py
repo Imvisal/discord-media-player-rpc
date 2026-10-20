@@ -32,7 +32,7 @@ EPISODE_PATTERNS = [
 
 YEAR = re.compile(r"(?<!\d)((?:19|20)\d{2})(?![\dxXpP])")
 
-USER_AGENT = {"User-Agent": "MediaRPC/1.0 (+https://github.com/Imvisal/discord-media-rpc)"}
+USER_AGENT = {"User-Agent": "MediaRPC/1.0 (+https://github.com/Imvisal/discord-media-player-rpc)"}
 TIMEOUT = 5
 
 
