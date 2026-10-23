@@ -65,7 +65,31 @@ UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
 
 # ---------------------------------------------------------------- Discord activity
 
+def build_generic_activity(started_at, player_name):
+    """Film / series ekak hambune nathnam: file nama pennanne nae, 'Watching PotPlayer' witharai."""
+    kwargs = {"start": started_at}
+    if "name" in UPDATE_PARAMS:
+        # aluth pypresence: card eke header eka 'Watching PotPlayer' wenawa
+        kwargs["name"] = player_name
+    else:
+        kwargs["details"] = f"Watching {player_name}"[:128].ljust(2)
+    if FALLBACK_IMAGE:
+        kwargs["large_image"] = FALLBACK_IMAGE
+        kwargs["large_text"] = player_name
+    if "buttons" in UPDATE_PARAMS:
+        kwargs["buttons"] = [{"label": PROJECT_BUTTON, "url": PROJECT_URL}]
+    if ActivityType is not None and "activity_type" in UPDATE_PARAMS:
+        kwargs["activity_type"] = ActivityType.WATCHING
+    if StatusDisplayType is not None and "status_display_type" in UPDATE_PARAMS:
+        name_mode = getattr(StatusDisplayType, "NAME", None)
+        if name_mode is not None:
+            kwargs["status_display_type"] = name_mode
+    return kwargs
+
+
 def build_activity(media, started_at, player_name):
+    if not media.matched:
+        return build_generic_activity(started_at, player_name)
     details = media.display_title()
     state = media.subtitle()
     kwargs = {
@@ -139,7 +163,7 @@ class RpcWorker(threading.Thread):
                         last_key = key
                         last_lookup = time.time()
                         self.emit("watching", (media, player_name))
-                    elif (not media.poster
+                    elif (not (media.matched and media.poster)
                           and time.time() - last_lookup >= POSTER_RETRY_SECONDS):
                         # poster hambuna nae: network fail wela wage nam aye try karanna
                         # (media_info eke cache eka nisa hamadama network ekata yanne nae)
@@ -319,11 +343,18 @@ class App:
             try:      # tray icon eke hover tooltip eka (127 akuru wala sima ekak thiyenawa)
                 tip = APP_TITLE
                 if media is not None:
-                    tip = f"{media.display_title()} {media.subtitle()}"
+                    tip = (f"{media.display_title()} {media.subtitle()}" if media.matched
+                           else f"Watching {player_name}")
                 self.tray.title = tip[:127]
             except Exception:
                 pass
-        if media is not None:
+        if media is not None and not media.matched:
+            self.heading_label.config(text=f"NOW WATCHING · {player_name.upper()}")
+            self.title_label.config(text=f"Watching {player_name}")
+            self.sub_label.config(text="")
+            self.poster_label.config(text="Not a movie / TV series (title hidden on Discord)")
+            self.watch_started = time.time()
+        elif media is not None:
             self.heading_label.config(text=f"NOW WATCHING · {player_name.upper()}")
             self.title_label.config(text=media.display_title())
             self.sub_label.config(text=media.subtitle())

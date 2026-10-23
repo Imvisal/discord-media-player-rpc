@@ -72,6 +72,7 @@ class Media:
     poster: Optional[str] = None
     info_url: Optional[str] = None      # TVmaze / Apple TV / IMDb page eka
     info_label: Optional[str] = None
+    matched: bool = False               # True = online (TVmaze/iTunes/IMDb/Wikipedia) film / series ekak widihata hambuna
 
     @property
     def is_series(self):
@@ -382,6 +383,7 @@ def _lookup(media):
             continue
         if found is None:
             continue
+        found = replace(found, matched=True)     # online hambuna = hari film / series ekak
         if found.poster:
             if best is not None:                 # TVmaze: episode nama thiyenawa, poster nae
                 found = replace(best, poster=found.poster)
@@ -389,7 +391,7 @@ def _lookup(media):
         best = found
 
     wait = RETRY_AFTER_ERROR if failed else RETRY_AFTER_NO_MATCH
-    return (best or media), time.time() + wait
+    return (best or media), time.time() + wait      # best nathnam matched=False (gamanma video ekak)
 
 
 _cache = {}
