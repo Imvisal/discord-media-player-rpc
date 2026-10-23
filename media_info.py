@@ -139,6 +139,13 @@ def parse_filename(raw):
         r"\b[\s._-]*",
         "", s, flags=re.I,
     )                                                                     # "www.Site.com - " ain karanna
+    # "CineSubz.com - Title", "Site.net_Title" wage (www nathi) site nama ain karanna.
+    # Site nama ekata passe separator ekak ("-", "_", space) thiyenna ona.
+    s = re.sub(
+        r"^\s*[\w-]+\.(?:com|net|org|lk|xyz|club|info|site|vip|to|cc|ws|me|tv|in|co|biz|top|pw|live)"
+        r"(?=[\s._-])[\s._-]*",
+        "", s, flags=re.I,
+    )
     trailing_group = bool(re.search(r"[\]\)\}]\s*$", s))                  # "...WEB-[CineSubz.com]"
     s = re.sub(r"[._]+", " ", s)
     s = re.sub(r"^(?:\s*\[[^\]]*\])+\s*", "", s)                          # [ReleaseGroup] ain karanna
