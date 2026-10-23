@@ -12,6 +12,7 @@ import os
 import re
 from ctypes import wintypes
 from dataclasses import dataclass
+from typing import NamedTuple
 
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
@@ -26,6 +27,13 @@ class Player:
     name: str            # UI eke / Discord eke pennana nama
     exe_prefixes: tuple  # process exe eke nama patan gannawa (lowercase)
     app_re: str          # window title eke thiyena player eke nama (regex)
+
+
+class Playing(NamedTuple):
+    player: Player      # which player
+    title: str          # film / file name taken from the window title
+    paused: bool        # best guess from the title / audio session
+    hwnd: int           # the player's window (PotPlayer's position is read through it)
 
 
 PLAYERS = (
@@ -139,7 +147,7 @@ def _audio_state(prefixes):
 
 def find_playing():
     """Film thiyena player eka hoyanawa.
-    (player_nama, film_nama, paused) ho None. paused = True nam player eka pause karala."""
+    Playing(player, title, paused, hwnd) ho None. paused = True nam player eka pause karala."""
     found = []
 
     def callback(hwnd, _lparam):
@@ -157,15 +165,15 @@ def find_playing():
             if exe.startswith(player.exe_prefixes):
                 media = extract_media_title(player, buf.value)
                 if media:
-                    found.append((player, media, bool(PAUSED_TITLE.search(buf.value))))
+                    found.append((player, media, bool(PAUSED_TITLE.search(buf.value)), hwnd))
                 break
         return True
 
     user32.EnumWindows(EnumWindowsProc(callback), 0)
     if not found:
         return None
-    player, media, title_paused = found[0]
+    player, media, title_paused, hwnd = found[0]
     # Title eke "paused" thiyenawanam pause. Nathnam audio session eka balanawa
     # (session nathnam playing kiyala hithanawa, false pause wenne nathi wenna).
     paused = title_paused or (_audio_state(player.exe_prefixes) is False)
-    return player.name, media, paused
+    return Playing(player, media, paused, hwnd)

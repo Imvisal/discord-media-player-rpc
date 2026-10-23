@@ -19,11 +19,16 @@ from tkinter import messagebox
 from pypresence import Presence
 
 import app_icon
+import app_settings
 import app_version
 import media_info
+import playback
 import players
+import settings_window
 import system_integration as sysint
 import updater
+from theme import (ACCENT, ACCENT_HOVER, BG, CARD, CARD_HOVER, ERROR, GREEN, MUTED, RED,
+                   RED_HOVER, TEXT, YELLOW)
 
 try:
     import pystray
@@ -56,6 +61,10 @@ PROJECT_BUTTON = "Get Media RPC"
 FALLBACK_IMAGE = "default_poster"
 POLL_SECONDS = 3      # player check karana gaman (seconds)
 PAUSE_CONFIRM_POLLS = 2   # pause kiyala hithanna kalin thiyenna ona consecutive polls
+                          # (player eka thamai pause kiyala kiwwoth 1k ma pawsa)
+MIN_UPDATE_SECONDS = 5    # Discord ekata update yawana weni weni athare minimum gaman
+TIMESTAMP_TOLERANCE = 3   # seconds: me tharamak wenas unoth witharai aluth timestamp ekak yawanne
+                          # (seek karaddi wenas wenawa, 1s rounding wage dewal ignore wenawa)
 RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
 POSTER_RETRY_SECONDS = 30   # poster nathnam aye hoyala balana gaman (seconds)
 UPDATE_CHECK_SECONDS = 6 * 3600   # aluth version ekak thiyenawada balana gaman
@@ -66,9 +75,28 @@ UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
 
 # ---------------------------------------------------------------- Discord activity
 
-def build_generic_activity(started_at, player_name, paused=False):
-    """Film / series ekak hambune nathnam: file nama pennanne nae, 'Watching PotPlayer' witharai."""
-    kwargs = {} if paused else {"start": started_at}
+def _watching_extras(kwargs, mode_name):
+    """Card eka 'Watching ...' widiyata, member list eke nama / details pennanna."""
+    if ActivityType is not None and "activity_type" in UPDATE_PARAMS:
+        kwargs["activity_type"] = ActivityType.WATCHING
+    if StatusDisplayType is not None and "status_display_type" in UPDATE_PARAMS:
+        mode = getattr(StatusDisplayType, mode_name, None)
+        if mode is not None:
+            kwargs["status_display_type"] = mode
+
+
+def _timestamps(kwargs, started_at, end, paused):
+    """start = timer, start + end = progress bar. Pause karapu welawe kisima ekak nae."""
+    if not paused and started_at is not None:
+        kwargs["start"] = started_at
+        if end is not None:
+            kwargs["end"] = end
+
+
+def build_generic_activity(started_at, player_name, paused=False, end=None, hide_button=False):
+    """Film eke nama pennanne nae: 'Watching PotPlayer' witharai (privacy mode / film nowana video)."""
+    kwargs = {}
+    _timestamps(kwargs, started_at, end, paused)
     if "name" in UPDATE_PARAMS:
         # aluth pypresence: card eke header eka 'Watching PotPlayer' wenawa
         kwargs["name"] = player_name
@@ -79,48 +107,50 @@ def build_generic_activity(started_at, player_name, paused=False):
     if FALLBACK_IMAGE:
         kwargs["large_image"] = FALLBACK_IMAGE
         kwargs["large_text"] = player_name
-    if "buttons" in UPDATE_PARAMS:
+    if "buttons" in UPDATE_PARAMS and not hide_button:
         kwargs["buttons"] = [{"label": PROJECT_BUTTON, "url": PROJECT_URL}]
-    if ActivityType is not None and "activity_type" in UPDATE_PARAMS:
-        kwargs["activity_type"] = ActivityType.WATCHING
-    if StatusDisplayType is not None and "status_display_type" in UPDATE_PARAMS:
-        name_mode = getattr(StatusDisplayType, "NAME", None)
-        if name_mode is not None:
-            kwargs["status_display_type"] = name_mode
+    _watching_extras(kwargs, "NAME")
     return kwargs
 
 
-def build_activity(media, started_at, player_name, paused=False):
-    if not media.matched:
-        return build_generic_activity(started_at, player_name, paused)
+def build_activity(media, started_at, end, player_name, paused=False, privacy=False,
+                   hide_button=False):
+    """Discord card eka. started_at / end = timer / progress bar (None nam kisima ekak nae)."""
+    if privacy or not media.matched:
+        return build_generic_activity(started_at, player_name, paused, end, hide_button)
     details = media.display_title()
     state = media.subtitle()
     if paused:
-        state = f"Paused · {state}"
+        state = f"Paused \u00b7 {state}"
     kwargs = {
         "details": details[:128].ljust(2),
         "state": state[:128].ljust(2),
     }
-    if not paused:       # pause karapu welawe timer eka pennanne nae
-        kwargs["start"] = started_at
+    _timestamps(kwargs, started_at, end, paused)
     if media.poster and len(media.poster) <= 256:
         kwargs["large_image"] = media.poster
-        kwargs["large_text"] = f"{details} · {player_name}"[:128]
+        kwargs["large_text"] = f"{details} \u00b7 {player_name}"[:128]
     elif FALLBACK_IMAGE:
         kwargs["large_image"] = FALLBACK_IMAGE
-        kwargs["large_text"] = f"{details} · {player_name}"[:128]
-    # Card eke yata "Get Media RPC" button eka (Discord eka button 2k wenakan danna puluwan)
-    if "buttons" in UPDATE_PARAMS:
+        kwargs["large_text"] = f"{details} \u00b7 {player_name}"[:128]
+    # Card eke yata "Get Media RPC" button eka
+    if "buttons" in UPDATE_PARAMS and not hide_button:
         kwargs["buttons"] = [{"label": PROJECT_BUTTON, "url": PROJECT_URL}]
-    # "Watching ..." card eka (Crunchyroll wage) pennanna
-    if ActivityType is not None and "activity_type" in UPDATE_PARAMS:
-        kwargs["activity_type"] = ActivityType.WATCHING
-    # Member list eke app eke nama wenuwata film nama pennanna
-    if StatusDisplayType is not None and "status_display_type" in UPDATE_PARAMS:
-        details_mode = getattr(StatusDisplayType, "DETAILS", None)
-        if details_mode is not None:
-            kwargs["status_display_type"] = details_mode
+    _watching_extras(kwargs, "DETAILS")
     return kwargs
+
+
+def same_activity(a, b):
+    """Discord ekata kalin yawapu eka samanai da (timestamps TIMESTAMP_TOLERANCE athule nam samanai)."""
+    if a is None or b is None or a.keys() != b.keys():
+        return False
+    for key, value in a.items():
+        if key in ("start", "end"):
+            if abs(value - b[key]) > TIMESTAMP_TOLERANCE:
+                return False
+        elif value != b[key]:
+            return False
+    return True
 
 
 # ---------------------------------------------------------------- Background worker
@@ -128,28 +158,33 @@ def build_activity(media, started_at, player_name, paused=False):
 class RpcWorker(threading.Thread):
     """Discord ekata connect wela player eke film eka yawana thread eka."""
 
-    def __init__(self, events):
+    def __init__(self, events, settings):
         super().__init__(daemon=True)
         self.events = events
+        self.settings = settings
         self.stop_event = threading.Event()
 
     def emit(self, kind, payload=None):
         self.events.put((kind, payload))
 
     def run(self):
+        cfg = self.settings
         rpc = None
         last_key = None
         media = None
         player_name = ""
-        started_at = None
         last_lookup = 0.0
         # Pause / resume tracking: play una welawa witharai gananawa, resume karaddi
-        # kalin thibba thanin patan gannawa.
+        # kalin thibba thanin patan gannawa. (Player eken position ganna ba nam meka use wenawa.)
         played = 0.0          # pause wenakan play una seconds
         play_since = None     # dan play wenawanam patan gaththa welawa
         paused = False
         pause_seen_at = 0.0
         pause_polls = 0       # pause kiyala hithanna consecutive polls (flicker nawaththanna)
+        last_sent = None      # Discord ekata kalin yawapu activity eka (duplicate nawaththanna)
+        last_sent_at = 0.0
+        shown = False         # Discord eke dan status ekak thiyenawada (last_sent reset una unath wenas wenne nae)
+        last_cfg = None
 
         while not self.stop_event.is_set():
             try:
@@ -158,46 +193,83 @@ class RpcWorker(threading.Thread):
                     rpc = Presence(CLIENT_ID)
                     rpc.connect()
                     self.emit("status", "connected")
+                    last_sent, shown = None, False
+
+                # Card eka penna widiya wenas karana settings wenas unoth aye yawanna
+                cfg_now = (bool(cfg.get("hide_button")), bool(cfg.get("hide_when_paused")),
+                           bool(cfg.get("show_progress")))
+                if cfg_now != last_cfg:
+                    last_cfg, last_sent = cfg_now, None
 
                 playing = players.find_playing()
                 if playing is None:
                     if last_key is not None:
                         rpc.clear()
-                        last_key = None
-                        media = None
+                        last_key = media = last_sent = None
+                        shown = False
                         self.emit("watching", None)
                 else:
-                    player_name, raw, paused_now = playing
-                    key = (player_name, raw)
+                    player_name, raw = playing.player.name, playing.title
+                    privacy = bool(cfg.get("privacy_mode"))
+                    key = (player_name, raw, privacy)
                     if key != last_key:
-                        # parse + poster hoyanna (palaweni wara tikak welawak yanawa)
-                        media = media_info.resolve(raw)
+                        # Privacy mode: film nama online hoyanne nae (file nama kisima thanakata yanne nae)
+                        media = media_info.Media(title="") if privacy else media_info.resolve(raw)
                         played, play_since = 0.0, time.time()
                         paused, pause_polls = False, 0
-                        last_key = key
-                        last_lookup = time.time()
-                        self.emit("watching", (media, player_name))
-                    elif (not (media.matched and media.poster)
+                        last_key, last_lookup, last_sent = key, time.time(), None
+                        self.emit("watching", (media, player_name, privacy))
+                    elif (not privacy and not (media.matched and media.poster)
                           and time.time() - last_lookup >= POSTER_RETRY_SECONDS):
                         # poster hambuna nae: network fail wela wage nam aye try karanna
                         # (media_info eke cache eka nisa hamadama network ekata yanne nae)
                         last_lookup = time.time()
                         retry = media_info.resolve(raw)
                         if retry != media:
-                            media = retry
-                            self.emit("watching", (media, player_name))
-                    # pause / resume
+                            media, last_sent = retry, None
+                            self.emit("watching", (media, player_name, privacy))
+
+                    # Player eken position + duration (progress bar ekata)
+                    show_progress = bool(cfg.get("show_progress"))
+                    pb = playback.read(player_name, playing.hwnd, cfg) if show_progress else None
+                    self.emit("progress", (pb, playback.hint(player_name, pb, show_progress)))
+
+                    # pause / resume. Player eka thamai pause kiyala kiwwoth eka dan ma shiyawenawa.
                     now = time.time()
+                    api_paused = pb.paused if pb is not None else None
+                    paused_now = playing.paused if api_paused is None else api_paused
+                    confirm = 1 if api_paused is not None else PAUSE_CONFIRM_POLLS
                     pause_polls = pause_polls + 1 if paused_now else 0
                     if pause_polls == 1:
                         pause_seen_at = now      # pause wuna kiyala palaweni wara dakka welawa
-                    if not paused and pause_polls >= PAUSE_CONFIRM_POLLS:
+                    if not paused and pause_polls >= confirm:
                         played += pause_seen_at - play_since
                         play_since, paused = None, True
                     elif paused and not paused_now:
                         play_since, paused = now, False
-                    started_at = int((play_since or now) - played)   # resume karaddi kalin thibba thanin
-                    rpc.update(**build_activity(media, started_at, player_name, paused))
+
+                    if paused and cfg.get("hide_when_paused"):
+                        # "Pause wunama hide karanna": status eka ain karala resume wenakan inna
+                        if shown:
+                            rpc.clear()
+                            shown = False
+                        last_sent = None
+                    else:
+                        started_at = end = None
+                        if not paused:
+                            if pb is not None:
+                                # Real position: seek karath hari, timer eka hari thanata enawa
+                                started_at = int(now - pb.position)
+                                if pb.duration > 0:
+                                    end = int(now - pb.position + pb.duration)
+                            else:
+                                started_at = int((play_since or now) - played)
+                        activity = build_activity(media, started_at, end, player_name, paused,
+                                                  privacy, bool(cfg.get("hide_button")))
+                        if (not same_activity(activity, last_sent)
+                                and (last_sent is None or now - last_sent_at >= MIN_UPDATE_SECONDS)):
+                            rpc.update(**activity)
+                            last_sent, last_sent_at, shown = activity, now, True
             except Exception:
                 # Discord close una / restart una wage welawal
                 try:
@@ -206,8 +278,8 @@ class RpcWorker(threading.Thread):
                 except Exception:
                     pass
                 rpc = None
-                last_key = None
-                media = None
+                last_key = media = last_sent = None
+                shown = False
                 self.emit("status", "error")
                 self.emit("watching", None)
                 self.stop_event.wait(RETRY_SECONDS)
@@ -224,18 +296,6 @@ class RpcWorker(threading.Thread):
 
 
 # ---------------------------------------------------------------- GUI
-
-BG = "#1e1f22"
-CARD = "#2b2d31"
-TEXT = "#f2f3f5"
-MUTED = "#949ba4"
-ACCENT = "#5865f2"
-ACCENT_HOVER = "#4752c4"
-RED = "#da373c"
-RED_HOVER = "#a12828"
-GREEN = "#23a55a"
-YELLOW = "#f0b232"
-ERROR = "#f23f43"
 
 STATUS = {
     "connecting": ("Connecting to Discord...", YELLOW),
@@ -259,9 +319,13 @@ class App:
         self.update_info = None
         self.update_busy = False
         self.notified_version = None     # tray notification eka eka version ekata ekak witharai
+        self.settings = app_settings.Settings()
+        self.settings_win = None
+        self.progress = None             # player eken ena position / duration (playback.Playback)
+        self.progress_at = 0.0           # eka kiyawapu welawa (tick eke extrapolate karanna)
 
         root.title(APP_TITLE)
-        root.geometry("380x540")
+        root.geometry("380x570")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -306,13 +370,22 @@ class App:
         self.elapsed_label = tk.Label(card, text="", bg=CARD, fg=MUTED,
                                       font=("Segoe UI", 9), anchor="w")
         self.elapsed_label.pack(fill="x", pady=(2, 0))
+        self.hint_label = tk.Label(card, text="", bg=CARD, fg=MUTED, font=("Segoe UI", 8),
+                                   anchor="w", justify="left", wraplength=310)
+        self.hint_label.pack(fill="x", pady=(2, 0))
 
-        # start / stop button
-        self.button = tk.Button(root, text="Start", command=self.toggle, bg=ACCENT, fg="white",
-                                activebackground=ACCENT_HOVER, activeforeground="white",
-                                relief="flat", bd=0, cursor="hand2",
-                                font=("Segoe UI", 11, "bold"), width=18, pady=8)
-        self.button.pack(pady=(18, 8))
+        # start / stop + settings buttons
+        button_row = tk.Frame(root, bg=BG)
+        button_row.pack(pady=(18, 8))
+        self.button = tk.Button(button_row, text="Start", command=self.toggle, bg=ACCENT,
+                                fg="white", activebackground=ACCENT_HOVER,
+                                activeforeground="white", relief="flat", bd=0, cursor="hand2",
+                                font=("Segoe UI", 11, "bold"), width=12, pady=8)
+        self.button.pack(side="left", padx=(0, 8))
+        tk.Button(button_row, text="Settings", command=self.open_settings, bg=CARD, fg=TEXT,
+                  activebackground=CARD_HOVER, activeforeground=TEXT, relief="flat", bd=0,
+                  cursor="hand2", font=("Segoe UI", 11, "bold"), width=12,
+                  pady=8).pack(side="left")
 
         self.autostart_var = tk.BooleanVar(value=sysint.is_autostart_enabled())
         tk.Checkbutton(root, text="Start with Windows", variable=self.autostart_var,
@@ -363,21 +436,27 @@ class App:
         self.dot.itemconfig(self.dot_item, fill=color)
 
     def set_watching(self, payload):
-        media, player_name = payload if payload else (None, "")
+        media, player_name, privacy = payload if payload else (None, "", False)
+        if media is None:
+            self.progress, self.progress_at = None, 0.0
+            self.hint_label.config(text="")
+        hidden = media is not None and (privacy or not media.matched)    # Discord ekata title eka yanne nae
         if self.tray is not None:
             try:      # tray icon eke hover tooltip eka (127 akuru wala sima ekak thiyenawa)
                 tip = APP_TITLE
                 if media is not None:
-                    tip = (f"{media.display_title()} {media.subtitle()}" if media.matched
-                           else f"Watching {player_name}")
+                    tip = (f"Watching {player_name}" if hidden
+                           else f"{media.display_title()} {media.subtitle()}")
                 self.tray.title = tip[:127]
             except Exception:
                 pass
-        if media is not None and not media.matched:
+        if hidden:
             self.heading_label.config(text=f"NOW WATCHING · {player_name.upper()}")
             self.title_label.config(text=f"Watching {player_name}")
             self.sub_label.config(text="")
-            self.poster_label.config(text="Not a movie / TV series (title hidden on Discord)")
+            self.poster_label.config(
+                text="Privacy mode: title hidden on Discord" if privacy
+                else "Not a movie / TV series (title hidden on Discord)")
             self.watch_started = time.time()
         elif media is not None:
             self.heading_label.config(text=f"NOW WATCHING · {player_name.upper()}")
@@ -401,7 +480,7 @@ class App:
     def start(self):
         if self.running():
             return
-        self.worker = RpcWorker(self.events)
+        self.worker = RpcWorker(self.events, self.settings)
         self.worker.start()
         self.button.config(text="Stop", bg=RED, activebackground=RED_HOVER)
         self.set_status("connecting")
@@ -442,6 +521,8 @@ class App:
                 pystray.MenuItem("Start with Windows",
                                  lambda icon, item: self.commands.put("autostart"),
                                  checked=lambda item: sysint.is_autostart_enabled()),
+                pystray.MenuItem("Settings",
+                                 lambda icon, item: self.commands.put("settings")),
                 pystray.MenuItem("Check for updates",
                                  lambda icon, item: self.commands.put("check_update")),
                 pystray.Menu.SEPARATOR,
@@ -495,6 +576,12 @@ class App:
             except Exception:
                 pass
         self.root.destroy()
+
+    def open_settings(self):
+        if self.settings_win is not None and self.settings_win.alive():
+            self.settings_win.focus()
+            return
+        self.settings_win = settings_window.SettingsWindow(self.root, self.settings)
 
     def on_autostart_checkbox(self):
         wanted = self.autostart_var.get()
@@ -634,6 +721,9 @@ class App:
                     self.refresh_tray()
                 elif cmd == "autostart":
                     self.toggle_autostart()
+                elif cmd == "settings":
+                    self.show_window()
+                    self.open_settings()
                 elif cmd == "check_update":
                     self.show_window()
                     self.update_label.config(text="Checking for updates...", fg=MUTED)
@@ -662,16 +752,43 @@ class App:
                     self.set_status(payload)
                 elif kind == "watching":
                     self.set_watching(payload)
+                elif kind == "progress":
+                    self.set_progress(payload)
         except queue.Empty:
             pass
         self.root.after(200, self.process_events)
 
+    def set_progress(self, payload):
+        self.progress, hint = payload
+        self.progress_at = time.time()
+        self.hint_label.config(text=hint or "")
+        self.refresh_elapsed()
+
+    @staticmethod
+    def clock(seconds):
+        h, rem = divmod(max(int(seconds), 0), 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}:{m:02d}:{s:02d}"
+
+    def refresh_elapsed(self):
+        """Real position / duration (player eken) nathnam elapsed timer eka."""
+        if self.watch_started is None:
+            return
+        pb = self.progress
+        if pb is None:
+            text = f"Elapsed {self.clock(time.time() - self.watch_started)}"
+        else:
+            position = pb.position + (0 if pb.paused else time.time() - self.progress_at)
+            if pb.duration > 0:
+                text = f"{self.clock(min(position, pb.duration))} / {self.clock(pb.duration)}"
+            else:
+                text = self.clock(position)
+            if pb.paused:
+                text += "  ·  Paused"
+        self.elapsed_label.config(text=text)
+
     def tick(self):
-        if self.watch_started is not None:
-            secs = int(time.time() - self.watch_started)
-            h, rem = divmod(secs, 3600)
-            m, s = divmod(rem, 60)
-            self.elapsed_label.config(text=f"Elapsed {h}:{m:02d}:{s:02d}")
+        self.refresh_elapsed()
         self.root.after(1000, self.tick)
 
 

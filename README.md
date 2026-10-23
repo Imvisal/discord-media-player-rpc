@@ -24,6 +24,8 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **One instance only.** Opening it twice just tells you it's already running.
 - **Online updates.** Shows a tray notification when a new version is out and updates itself in one click.
 - **Pause detection.** Shows "Paused" on your Discord card while the video is paused, and the timer continues from where it stopped when you resume.
+- **Progress bar.** For PotPlayer, VLC, MPC-HC and MPC-BE the card shows a real progress bar that follows seeking (VLC and MPC need their web interface switched on once, see [Progress bar](#progress-bar)).
+- **Settings.** Hide the status while paused, hide the button, or use privacy mode to keep the film name off Discord (see [Settings](#settings)).
 
 ## Supported players
 
@@ -86,7 +88,39 @@ Good to know:
 - Lookups use only the cleaned-up title (and year); nothing else about your system or files is sent.
 - If no confident match is found, or you're offline, the card shows just the title. Media RPC retries about every 30 seconds.
 - If a title is detected wrongly, check `parse_filename` in `media_info.py`.
-- Elapsed time starts when the title is detected. Players don't expose playback position through the window title, so there's no progress bar.
+- The window title doesn't contain the playback position, so the [progress bar](#progress-bar) reads it from the player directly. Players that can't report it get an elapsed timer that starts when the title is detected.
+
+## Progress bar
+
+When the player reports its position and length, the Discord card shows a progress bar (like Spotify or Crunchyroll) instead of a plain timer. Media RPC re-reads the position every few seconds, so seeking, pausing and resuming keep the bar correct.
+
+| Player | Progress bar | Setup |
+| --- | --- | --- |
+| PotPlayer | Yes | None. Read through PotPlayer's own remote messages. |
+| VLC | Yes | Turn on the web interface once (below). |
+| MPC-HC, MPC-BE | Yes | Turn on the web interface once (below). |
+| KMPlayer, SMPlayer, mpv, GOM Player | No | They don't share their position. You get the elapsed timer. |
+
+**VLC:** Tools > Preferences > bottom-left **Show settings: All** > **Interface > Main interfaces**, tick **Web**. Then open **Main interfaces > Lua** and set a **Lua HTTP password**. Restart VLC. In Media RPC, open **Settings**, type the same password, and press **Test**.
+
+**MPC-HC / MPC-BE:** View > Options > **Player > Web Interface**, tick **Listen on port** (default `13579`). Press **Test** in the Media RPC settings.
+
+Good to know:
+
+- The web interfaces are only read from `127.0.0.1` (your own PC). The VLC password is stored in plain text in your Media RPC settings file.
+- The app window shows whether the bar is active: "Progress bar: on (VLC)" or what's missing.
+- Turn the bar off with **Show a progress bar** in Settings to get the simple timer back.
+
+## Settings
+
+Open **Settings** in the app window (or the tray menu). Checkboxes apply immediately.
+
+| Setting | What it does |
+| --- | --- |
+| Hide my status while the video is paused | Removes the card from Discord while paused and brings it back when you resume. Off: the card says "Paused". |
+| Hide the "Get Media RPC" button | Removes the button from the card. |
+| Privacy mode: hide the film name | Discord only shows "Watching <player>". No title, poster or episode, and the file name is not looked up online. The progress bar still works. |
+| Show a progress bar when the player allows it | See [Progress bar](#progress-bar). |
 
 ## The "Get Media RPC" button
 
@@ -136,6 +170,10 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 | `media_rpc.py` | App window, tray and the Discord Rich Presence worker |
 | `media_info.py` | Filename parsing and poster / episode lookup |
 | `players.py` | Supported players and window-title detection |
+| `playback.py` | Playback position and length for the progress bar (PotPlayer, VLC, MPC-HC/BE) |
+| `settings_window.py` | The Settings window |
+| `app_settings.py` | Settings shared between the window and the Discord worker |
+| `theme.py` | Colours used by the windows |
 | `system_integration.py` | Start with Windows and single-instance handling |
 | `updater.py` | Online updates: version check, verified download, exe swap |
 | `app_version.py` | App version (set from the release tag when building) |
@@ -151,5 +189,6 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 ## Limitations
 
 - Windows only.
-- Pausing a film doesn't change the status, because the window title doesn't reveal pause state.
-- No progress bar (see above).
+- Pause is read from the player where possible (PotPlayer, VLC, MPC) and otherwise guessed from the window title and the player's audio, so it can be a few seconds late.
+- The progress bar needs a player that reports its position (see [Progress bar](#progress-bar)); the others get an elapsed timer.
+- Discord shows your PC's status whatever device you're using. If you leave a player open (even paused) and go play on your phone, the card stays visible. Use **Hide my status while the video is paused**, or close the player.
