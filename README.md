@@ -5,6 +5,9 @@
 Windows only. No Python, no API keys, no setup: download the exe and run it.
 
 <p align="center">
+  <img src="assets/logo.png" alt="Media RPC logo" width="96">
+</p>
+<p align="center">
   <img src="assets/preview.png" alt="Media RPC showing a film as a Watching card on a Discord profile" width="300">
 </p>
 <p align="center"><sub>Example: a film playing in PotPlayer, shown on a Discord profile.</sub></p>
@@ -18,7 +21,7 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **System tray.** Closing the window keeps the app running quietly in the tray.
 - **Start with Windows.** Optional auto-start, minimized to the tray.
 - **One instance only.** Opening it twice just tells you it's already running.
-- **Online updates.** Tells you when a new version is out and updates itself in one click.
+- **Online updates.** Shows a tray notification when a new version is out and updates itself in one click.
 
 ## Supported players
 
@@ -120,7 +123,7 @@ To use your own Discord Application, change `CLIENT_ID` in `media_rpc.py`.
 
 ## Build the exe
 
-Pushing a tag that starts with `v` (for example `v1.6.1`), or publishing a release in **Releases > Draft a new release**, triggers GitHub Actions to build `MediaRPC.exe` and attach it, together with `MediaRPC.exe.sha256`, to the release. The tag becomes the app's version number, and installed copies of Media RPC will offer it as an update once the exe is attached. Use a higher version than the previous release (`v1.6.1` after `v1.5.0`).
+Pushing a tag that starts with `v` (for example `v1.6.2`), or publishing a release in **Releases > Draft a new release**, triggers GitHub Actions to build `MediaRPC.exe` and attach it, together with `MediaRPC.exe.sha256`, to the release. The tag becomes the app's version number, and installed copies of Media RPC will offer it as an update once the exe is attached. Use a higher version than the previous release (`v1.6.2` after `v1.6.1`).
 
 Without a tag, run **Actions > Build Windows exe > Run workflow** and download the result from **Artifacts**.
 

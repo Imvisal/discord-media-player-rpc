@@ -209,6 +209,7 @@ class App:
         self.ui_queue = queue.Queue()    # update thread -> UI (worker events walin wen karala)
         self.update_info = None
         self.update_busy = False
+        self.notified_version = None     # tray notification eka eka version ekata ekak witharai
 
         root.title(APP_TITLE)
         root.geometry("380x540")
@@ -477,12 +478,21 @@ class App:
 
         threading.Thread(target=work, daemon=True).start()
 
-    def show_update(self, info):
+    def show_update(self, info, manual=False):
         self.update_info = info
         self.update_label.config(text=f"Update available: v{info.version}", fg=GREEN)
         label = "Update and restart" if updater.can_self_update() else "Open download page"
         self.update_button.config(text=label, state="normal")
         self.update_button.pack(pady=(6, 0))
+        # Auto check ekakin aluth version ekak hambunoth tray notification ekak (eka version ekata ekakin witharai)
+        if not manual and self.tray is not None and self.notified_version != info.version:
+            self.notified_version = info.version
+            try:
+                self.tray.notify(f"Version {info.version} is available. "
+                                 "Open Media RPC and click \"Update and restart\".",
+                                 f"{APP_TITLE} update")
+            except Exception:
+                pass
 
     def install_update(self):
         info = self.update_info
@@ -532,7 +542,7 @@ class App:
                     self.update_busy = False
                     info, manual, error = payload
                     if info is not None:
-                        self.show_update(info)
+                        self.show_update(info, manual)
                     elif manual:
                         if error is not None:
                             self.update_label.config(text="Couldn't check for updates (offline?)", fg=ERROR)
