@@ -178,6 +178,7 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 | `updater.py` | Online updates: version check, verified download, exe swap |
 | `app_version.py` | App version (set from the release tag when building) |
 | `app_icon.py` | Generates the app icon |
+| `site/` | The download website (static HTML, deploys to Vercel with root directory `site`) |
 
 ## Troubleshooting
 

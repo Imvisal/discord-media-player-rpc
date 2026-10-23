@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media RPC | Discord Rich Presence for your video player</title>
+  <meta name="description" content="Free Windows app that shows the film or TV episode you're watching in PotPlayer, VLC, MPC-HC, mpv and more as a Watching card on your Discord profile, with poster, episode name and progress bar.">
+  <meta name="theme-color" content="#0B0F14">
+  <meta property="og:title" content="Media RPC | Discord Rich Presence for your video player">
+  <meta property="og:description" content="Show what you're watching on Discord. Poster, episode name and a live progress bar. Free for Windows.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://raw.githubusercontent.com/Imvisal/discord-media-player-rpc/main/assets/preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="site-header container">
+    <a href="#top" class="brand">
+      <img src="logo.png" alt="" width="28" height="28">
+      Media RPC
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#features">Features</a>
+      <a href="#players">Players</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/Imvisal/discord-media-player-rpc" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- HERO -->
+    <section class="hero container">
+      <div class="hero-copy">
+        <p class="eyebrow">&gt; Discord Rich Presence for Windows</p>
+        <h1>Show what you're watching on Discord.</h1>
+        <p class="lead">Media RPC detects the film or episode playing in your video player and shows it on your profile as a <strong>Watching</strong> card, with poster, episode name and a live progress bar.</p>
+
+        <div class="actions">
+          <a class="btn btn-primary" id="downloadBtn" href="https://github.com/Imvisal/discord-media-player-rpc/releases/latest" rel="noopener">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+            <span id="downloadLabel">Download for Windows</span>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/Imvisal/discord-media-player-rpc" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+        <p class="fine">Free. No account, no API keys. <span id="fineVersion"></span></p>
+      </div>
+
+      <div class="hero-shot">
+        <img src="preview.png" alt="Media RPC showing a film as a Watching card on a Discord profile" width="302" height="573">
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="container" aria-label="Project stats">
+      <div class="stats">
+        <div class="stat">
+          <p class="stat-num" id="statDownloads">&mdash;</p>
+          <p class="stat-label">Downloads</p>
+        </div>
+        <div class="stat">
+          <p class="stat-num" id="statVersion">&mdash;</p>
+          <p class="stat-label">Latest version</p>
+        </div>
+        <div class="stat">
+          <p class="stat-num">8</p>
+          <p class="stat-label">Supported players</p>
+        </div>
+        <div class="stat">
+          <p class="stat-num">Free</p>
+          <p class="stat-label">Open source</p>
+        </div>
+      </div>
+      <p class="stats-note" id="statsNote">Live numbers from GitHub Releases.</p>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features" class="section container">
+      <p class="label">01 / Features</p>
+      <h2 class="section-title">Everything you'd want, nothing to set up.</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>Automatic detection</h3>
+          <p>Reads your player's window title and tells films from series episodes. Release noise like <code>1080p</code>, <code>x265</code> or site tags is cleaned up for you.</p>
+        </article>
+        <article class="card">
+          <h3>Posters and episode names</h3>
+          <p>Artwork and episode titles come from TVmaze, iTunes, IMDb and Wikipedia. A poster is only used when the title and year really match.</p>
+        </article>
+        <article class="card">
+          <h3>Real progress bar</h3>
+          <p>PotPlayer, VLC, MPC-HC and MPC-BE show a bar that follows seeking, pausing and resuming. Other players get an elapsed timer.</p>
+        </article>
+        <article class="card">
+          <h3>Pause detection</h3>
+          <p>The card says "Paused" while the video is paused, or hides itself entirely if you prefer.</p>
+        </article>
+        <article class="card">
+          <h3>Privacy mode</h3>
+          <p>Keep the film name off Discord. It only shows "Watching" your player, and the file name is never looked up online.</p>
+        </article>
+        <article class="card">
+          <h3>One-click updates</h3>
+          <p>Get notified when a new version is out and update in one click. Downloads are checked against a SHA-256 checksum before installing.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- PLAYERS -->
+    <section id="players" class="section container">
+      <p class="label">02 / Players</p>
+      <h2 class="section-title">Works with the players you already use.</h2>
+      <ul class="chips">
+        <li>PotPlayer</li><li>VLC</li><li>MPC-HC</li><li>MPC-BE</li>
+        <li>KMPlayer</li><li>SMPlayer</li><li>mpv</li><li>GOM Player</li>
+      </ul>
+      <p class="muted">Windows Media Player and the Windows 11 "Media Player" app don't put the film name in their window title, so they can't be detected.</p>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section container">
+      <p class="label">03 / Get started</p>
+      <h2 class="section-title">Running in under a minute.</h2>
+      <ol class="steps">
+        <li><span>1</span><div><h3>Download</h3><p>Grab <code>MediaRPC.exe</code> from the latest release. No installer, no Python.</p></div></li>
+        <li><span>2</span><div><h3>Run it</h3><p>Double-click it and keep the Discord desktop app open. It lives in your system tray.</p></div></li>
+        <li><span>3</span><div><h3>Press play</h3><p>Start a film or episode in your player. It now shows on your Discord profile.</p></div></li>
+      </ol>
+      <div class="actions">
+        <a class="btn btn-primary" id="downloadBtn2" href="https://github.com/Imvisal/discord-media-player-rpc/releases/latest" rel="noopener">Download for Windows</a>
+        <a class="btn btn-ghost" href="https://github.com/Imvisal/discord-media-player-rpc#readme" target="_blank" rel="noopener">Read the docs</a>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="section container">
+      <p class="label">04 / FAQ</p>
+      <h2 class="section-title">Questions</h2>
+      <div class="faq">
+        <details>
+          <summary>Windows says "unrecognized app". Is it safe?</summary>
+          <p>The exe isn't code-signed, so Windows SmartScreen shows a warning. Click <strong>More info &rarr; Run anyway</strong>. The whole project is open source, and you can read the code or build the exe yourself on GitHub.</p>
+        </details>
+        <details>
+          <summary>Does it work with the Discord website or phone app?</summary>
+          <p>It needs the Discord <strong>desktop</strong> app on the same PC as your player. The browser version can't receive Rich Presence from apps.</p>
+        </details>
+        <details>
+          <summary>I can't see the "Get Media RPC" button on my own profile.</summary>
+          <p>That's a Discord rule: Rich Presence buttons are only shown to other people. Ask a friend to check, or hide the button in Settings.</p>
+        </details>
+        <details>
+          <summary>What does it send over the internet?</summary>
+          <p>Only the cleaned-up title (and year) is used to look up posters, and one request to GitHub checks for updates. Turn on privacy mode and even the title stays on your PC.</p>
+        </details>
+        <details>
+          <summary>Is the download count real?</summary>
+          <p>Yes. It is the total download count GitHub reports for <code>MediaRPC.exe</code> across all releases, fetched live when you open this page.</p>
+        </details>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer container">
+    <span>&copy; 2026 Visal Udyogi</span>
+    <span>
+      <a href="https://github.com/Imvisal/discord-media-player-rpc" target="_blank" rel="noopener">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/Imvisal/discord-media-player-rpc/releases" target="_blank" rel="noopener">All releases</a>
+    </span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
