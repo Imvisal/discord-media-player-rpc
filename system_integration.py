@@ -16,6 +16,7 @@ except ImportError:       # Windows nowana welawaka import wenne nae
 APP_NAME = "MediaRPC"
 LEGACY_APP_NAME = "PotPlayerRPC"      # palaya nama
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+APPROVED_KEY = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"
 
 _APPDATA = os.environ.get("APPDATA", os.path.expanduser("~"))
 SETTINGS_DIR = os.path.join(_APPDATA, "MediaRPC")
@@ -38,15 +39,45 @@ def _autostart_command():
     return f'"{python}" "{script}" --minimized'
 
 
-def is_autostart_enabled():
-    if winreg is None:
-        return False
+def _registered_command():
+    """Run key eke thiyena command eka, nathnam None."""
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
-            winreg.QueryValueEx(key, APP_NAME)
-            return True
+            return winreg.QueryValueEx(key, APP_NAME)[0]
     except OSError:
+        return None
+
+
+def _windows_allows_autostart():
+    """
+    Task Manager > Startup apps (ho Settings > Apps > Startup) eken Disable karala nam False.
+    Run key eka thiyenawa kiyala witharak podi na: Windows eka StartupApproved walin block karanna puluwan.
+    Record ekak nathnam (default) True.
+    """
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, APPROVED_KEY) as key:
+            data = winreg.QueryValueEx(key, APP_NAME)[0]
+    except OSError:
+        return True
+    if isinstance(data, (bytes, bytearray)) and data:
+        return data[0] % 2 == 0          # 02 / 06 = enabled, 03 = disabled
+    return True
+
+
+def _clear_startup_block():
+    """Task Manager eken disable karala thibunoth eka ain karanawa (Start with Windows on karaddi)."""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, APPROVED_KEY, 0, winreg.KEY_SET_VALUE) as key:
+            winreg.DeleteValue(key, APP_NAME)
+    except OSError:
+        pass            # record ekak nathnam hari, key eka nathnam hari: wadak na
+
+
+def is_autostart_enabled():
+    """Run key eka thiyenawa AND Windows eka eka block karala nae nam witharak True."""
+    if winreg is None:
         return False
+    return _registered_command() is not None and _windows_allows_autostart()
 
 
 def set_autostart(enabled):
@@ -62,9 +93,29 @@ def set_autostart(enabled):
                     winreg.DeleteValue(key, APP_NAME)
                 except FileNotFoundError:
                     pass
+        if enabled:
+            _clear_startup_block()
         return True
     except OSError:
         return False
+
+
+def refresh_autostart():
+    """
+    App eka open wenakota: auto-start on nam saha Run key eke path eka dan run wena exe / script eken wenas nam
+    (exe eka move karala, folder eka rename karala wage) aluth path eka damma hadanawa.
+    Task Manager eken user disable karala nam eka aye on karanne nae.
+    """
+    if winreg is None:
+        return
+    registered = _registered_command()
+    if registered is None or registered == _autostart_command():
+        return
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, _autostart_command())
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------- single instance

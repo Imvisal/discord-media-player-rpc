@@ -666,6 +666,7 @@ def main():
 
     # palaya nama (PotPlayerRPC) walin enawanam auto-start/settings karagannawa
     sysint.migrate_legacy()
+    sysint.refresh_autostart()       # exe eka move karapu nam Run key eke path eka aluth karanawa
 
     # palaweni wara run karaddi Windows start wenakota auto-start wenna on karanawa
     # (window eke "Start with Windows" eken off karanna puluwan)
@@ -678,5 +679,20 @@ def main():
     root.mainloop()
 
 
+def _log_crash():
+    """--noconsole / pythonw walin run karaddi error pennanne nae. Meka error.log ekata liyanawa."""
+    import traceback
+    try:
+        os.makedirs(sysint.SETTINGS_DIR, exist_ok=True)
+        with open(os.path.join(sysint.SETTINGS_DIR, "error.log"), "a", encoding="utf-8") as f:
+            f.write(time.strftime("[%Y-%m-%d %H:%M:%S] ") + traceback.format_exc() + "\n")
+    except OSError:
+        pass
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        _log_crash()
+        raise
