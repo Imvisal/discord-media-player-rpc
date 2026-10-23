@@ -120,7 +120,7 @@ To use your own Discord Application, change `CLIENT_ID` in `media_rpc.py`.
 
 ## Build the exe
 
-Pushing a tag that starts with `v` (for example `v1.6.0`), or publishing a release in **Releases > Draft a new release**, triggers GitHub Actions to build `MediaRPC.exe` and attach it, together with `MediaRPC.exe.sha256`, to the release. The tag becomes the app's version number, and installed copies of Media RPC will offer it as an update once the exe is attached. Use a higher version than the previous release (`v1.6.0` after `v1.5.0`).
+Pushing a tag that starts with `v` (for example `v1.6.1`), or publishing a release in **Releases > Draft a new release**, triggers GitHub Actions to build `MediaRPC.exe` and attach it, together with `MediaRPC.exe.sha256`, to the release. The tag becomes the app's version number, and installed copies of Media RPC will offer it as an update once the exe is attached. Use a higher version than the previous release (`v1.6.1` after `v1.5.0`).
 
 Without a tag, run **Actions > Build Windows exe > Run workflow** and download the result from **Artifacts**.
 
