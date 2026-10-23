@@ -6,6 +6,7 @@ import ctypes
 import json
 import os
 import sys
+import time
 
 try:
     import winreg
@@ -68,23 +69,58 @@ def set_autostart(enabled):
 
 # ---------------------------------------------------------------- single instance
 
-def acquire_single_instance():
-    """Aye app eka run wenawanam False. Palaweni instance nam True."""
+def acquire_single_instance(wait_seconds=0):
+    """
+    Aye app eka run wenawanam False. Palaweni instance nam True.
+    wait_seconds > 0 nam (update ekakin passe restart wenakota) paraana eka iwara wenakan thawa balan innawa.
+    """
     global _mutex_handle
     try:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.CreateMutexW.restype = ctypes.c_void_p
-        handle = kernel32.CreateMutexW(None, False, "Local\\MediaRPC_SingleInstance")
-        already_running = ctypes.get_last_error() == 183      # ERROR_ALREADY_EXISTS
-        if already_running:
-            return False
-        _mutex_handle = handle
-        return True
+        kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+        deadline = time.time() + wait_seconds
+        while True:
+            handle = kernel32.CreateMutexW(None, False, "Local\\MediaRPC_SingleInstance")
+            already_running = ctypes.get_last_error() == 183      # ERROR_ALREADY_EXISTS
+            if not already_running:
+                _mutex_handle = handle
+                return True
+            kernel32.CloseHandle(handle)      # handle eka hold karanawanam mutex eka kawadawath nathi wenne nae
+            if time.time() >= deadline:
+                return False
+            time.sleep(0.5)
     except Exception:
         return True       # check karanna ba unoth wada karanna denawa
 
 
 # ---------------------------------------------------------------- settings
+
+def load_settings():
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def get_setting(key, default=None):
+    return load_settings().get(key, default)
+
+
+def set_setting(key, value):
+    """Wena settings nathi nokara ekak save karanawa."""
+    try:
+        data = load_settings()
+        data[key] = value
+        os.makedirs(SETTINGS_DIR, exist_ok=True)
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        return True
+    except OSError:
+        return False
+
 
 def migrate_legacy():
     """Palaya "PotPlayerRPC" version eken enawanam auto-start eka saha settings aluth nama ekata gannawa."""
@@ -109,13 +145,8 @@ def migrate_legacy():
 
 
 def is_first_run():
-    return not os.path.exists(SETTINGS_FILE)
+    return not load_settings().get("first_run_done")
 
 
 def mark_first_run_done():
-    try:
-        os.makedirs(SETTINGS_DIR, exist_ok=True)
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump({"first_run_done": True}, f)
-    except OSError:
-        pass
+    set_setting("first_run_done", True)

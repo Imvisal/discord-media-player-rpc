@@ -7,19 +7,23 @@ Windows walata witharai.
 """
 
 import inspect
+import os
 import queue
 import sys
 import threading
 import time
 import tkinter as tk
+import webbrowser
 from tkinter import messagebox
 
 from pypresence import Presence
 
 import app_icon
+import app_version
 import media_info
 import players
 import system_integration as sysint
+import updater
 
 try:
     import pystray
@@ -53,6 +57,8 @@ FALLBACK_IMAGE = "default_poster"
 POLL_SECONDS = 5      # player check karana gaman (seconds)
 RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
 POSTER_RETRY_SECONDS = 30   # poster nathnam aye hoyala balana gaman (seconds)
+UPDATE_CHECK_SECONDS = 6 * 3600   # aluth version ekak thiyenawada balana gaman
+UPDATE_FIRST_CHECK_MS = 5000      # app eka open wela tikak passe palaweni check eka
 
 UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
 
@@ -200,9 +206,12 @@ class App:
         self.tray = None
         self.tray_notified = False
         self.quitting = False
+        self.ui_queue = queue.Queue()    # update thread -> UI (worker events walin wen karala)
+        self.update_info = None
+        self.update_busy = False
 
         root.title(APP_TITLE)
-        root.geometry("380x440")
+        root.geometry("380x540")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -260,7 +269,26 @@ class App:
                        command=self.on_autostart_checkbox, bg=BG, fg=TEXT,
                        selectcolor=CARD, activebackground=BG, activeforeground=TEXT,
                        highlightthickness=0, bd=0, cursor="hand2",
-                       font=("Segoe UI", 10)).pack(pady=(2, 6))
+                       font=("Segoe UI", 10)).pack(pady=(2, 2))
+
+        self.autoupdate_var = tk.BooleanVar(value=bool(sysint.get_setting("auto_update_check", True)))
+        tk.Checkbutton(root, text="Check for updates automatically", variable=self.autoupdate_var,
+                       command=self.on_autoupdate_checkbox, bg=BG, fg=TEXT,
+                       selectcolor=CARD, activebackground=BG, activeforeground=TEXT,
+                       highlightthickness=0, bd=0, cursor="hand2",
+                       font=("Segoe UI", 10)).pack(pady=(0, 4))
+
+        # version + update (aluth version ekak thiyenakota button eka pennanawa)
+        self.update_box = tk.Frame(root, bg=BG)
+        self.update_box.pack(pady=(2, 8))
+        self.update_label = tk.Label(self.update_box, text=self.version_text(), bg=BG, fg=MUTED,
+                                     font=("Segoe UI", 9))
+        self.update_label.pack()
+        self.update_button = tk.Button(self.update_box, text="", command=self.install_update,
+                                       bg=GREEN, fg="white", activebackground="#1a8247",
+                                       activeforeground="white", relief="flat", bd=0,
+                                       cursor="hand2", font=("Segoe UI", 10, "bold"),
+                                       padx=14, pady=5)
 
         tk.Label(root, text="Works with PotPlayer, VLC, KMPlayer, MPC-HC, MPC-BE,\n"
                             "SMPlayer, mpv and GOM Player. Keep Discord (desktop app) open.\n"
@@ -270,6 +298,7 @@ class App:
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.process_events)
         self.root.after(1000, self.tick)
+        self.root.after(UPDATE_FIRST_CHECK_MS, self.auto_check_updates)
 
         self.setup_tray()
         self.start()   # open karanakotama auto-start
@@ -356,6 +385,8 @@ class App:
                 pystray.MenuItem("Start with Windows",
                                  lambda icon, item: self.commands.put("autostart"),
                                  checked=lambda item: sysint.is_autostart_enabled()),
+                pystray.MenuItem("Check for updates",
+                                 lambda icon, item: self.commands.put("check_update")),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit", lambda icon, item: self.commands.put("quit")),
             )
@@ -415,6 +446,111 @@ class App:
             messagebox.showwarning(APP_TITLE, "Could not change the Windows startup setting.")
         self.refresh_tray()
 
+    # -- online updates -------------------------------------------------------
+
+    @staticmethod
+    def version_text():
+        v = app_version.__version__
+        return "Development build (no auto-update)" if updater.is_dev_build(v) else f"Version {v}"
+
+    def on_autoupdate_checkbox(self):
+        sysint.set_setting("auto_update_check", bool(self.autoupdate_var.get()))
+
+    def auto_check_updates(self):
+        """Palaweni check eka + paya 6k pasuwa pasuwa. Checkbox eka off nam check karanne nae."""
+        if self.quitting:
+            return
+        if self.autoupdate_var.get():
+            self.check_updates(manual=False)
+        self.root.after(UPDATE_CHECK_SECONDS * 1000, self.auto_check_updates)
+
+    def check_updates(self, manual=False):
+        if self.update_busy or self.quitting:
+            return
+        self.update_busy = True
+
+        def work():
+            try:
+                self.ui_queue.put(("update_check", (updater.check_for_update(), manual, None)))
+            except Exception as exc:
+                self.ui_queue.put(("update_check", (None, manual, exc)))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def show_update(self, info):
+        self.update_info = info
+        self.update_label.config(text=f"Update available: v{info.version}", fg=GREEN)
+        label = "Update and restart" if updater.can_self_update() else "Open download page"
+        self.update_button.config(text=label, state="normal")
+        self.update_button.pack(pady=(6, 0))
+
+    def install_update(self):
+        info = self.update_info
+        if info is None or self.update_busy:
+            return
+        if not updater.can_self_update():
+            webbrowser.open(info.page_url)      # source walin run karanawa / folder eka write karanna ba
+            return
+        self.update_busy = True
+        self.update_button.config(text="Downloading... 0%", state="disabled")
+
+        def work():
+            try:
+                path = updater.download(
+                    info, progress=lambda pct: self.ui_queue.put(("update_progress", pct)))
+                self.ui_queue.put(("update_ready", path))
+            except Exception as exc:
+                self.ui_queue.put(("update_error", exc))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def finish_update(self, path):
+        """Download + checksum ok. Presence eka nawathala, exe eka replace karala aluth eka start karanawa."""
+        minimized = self.root.state() == "withdrawn"
+        self.stop()
+        try:
+            updater.apply_update(path, minimized=minimized)
+        except Exception:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            self.update_busy = False
+            self.update_button.config(text="Update and restart", state="normal")
+            messagebox.showwarning(APP_TITLE, "Could not install the update automatically.\n"
+                                              "Use the download page instead.")
+            webbrowser.open(self.update_info.page_url)
+            self.start()
+            return
+        self.quit_app()          # aluth process eka "--wait-for-previous" ekka balan inne
+
+    def handle_ui_events(self):
+        try:
+            while True:
+                kind, payload = self.ui_queue.get_nowait()
+                if kind == "update_check":
+                    self.update_busy = False
+                    info, manual, error = payload
+                    if info is not None:
+                        self.show_update(info)
+                    elif manual:
+                        if error is not None:
+                            self.update_label.config(text="Couldn't check for updates (offline?)", fg=ERROR)
+                        elif updater.is_dev_build():
+                            self.update_label.config(text=self.version_text(), fg=MUTED)
+                        else:
+                            self.update_label.config(text=f"{self.version_text()} (up to date)", fg=GREEN)
+                elif kind == "update_progress":
+                    self.update_button.config(text=f"Downloading... {payload}%")
+                elif kind == "update_ready":
+                    self.finish_update(payload)
+                elif kind == "update_error":
+                    self.update_busy = False
+                    self.update_button.config(text="Retry update", state="normal")
+                    self.update_label.config(text="Update download failed. Try again.", fg=ERROR)
+        except queue.Empty:
+            pass
+
     def toggle_autostart(self):
         wanted = not sysint.is_autostart_enabled()
         sysint.set_autostart(wanted)
@@ -432,6 +568,10 @@ class App:
                     self.refresh_tray()
                 elif cmd == "autostart":
                     self.toggle_autostart()
+                elif cmd == "check_update":
+                    self.show_window()
+                    self.update_label.config(text="Checking for updates...", fg=MUTED)
+                    self.check_updates(manual=True)
                 elif cmd == "quit":
                     self.quit_app()
                     return
@@ -443,6 +583,9 @@ class App:
     def process_events(self):
         self.handle_commands()
         if self.quitting:
+            return
+        self.handle_ui_events()
+        if self.quitting:        # update install eken passe app eka iwara wenawa
             return
         try:
             while True:
@@ -467,7 +610,9 @@ class App:
 
 
 def main():
-    if not sysint.acquire_single_instance():
+    # Update ekakin passe aluth exe eka start wenakota paraana eka iwara wenakan tikak balan innawa
+    wait = 20 if "--wait-for-previous" in sys.argv else 0
+    if not sysint.acquire_single_instance(wait_seconds=wait):
         root = tk.Tk()
         root.withdraw()
         messagebox.showinfo(APP_TITLE,
@@ -475,6 +620,8 @@ def main():
                             "Check the system tray (the ^ arrow next to the clock).")
         root.destroy()
         return
+
+    updater.cleanup_old_files()      # kalin update ekakin ithuru una MediaRPC.exe.old wage files ain karanawa
 
     # palaya nama (PotPlayerRPC) walin enawanam auto-start/settings karagannawa
     sysint.migrate_legacy()

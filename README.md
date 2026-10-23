@@ -18,6 +18,7 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **System tray.** Closing the window keeps the app running quietly in the tray.
 - **Start with Windows.** Optional auto-start, minimized to the tray.
 - **One instance only.** Opening it twice just tells you it's already running.
+- **Online updates.** Tells you when a new version is out and updates itself in one click.
 
 ## Supported players
 
@@ -48,6 +49,23 @@ You only need Windows and the Discord desktop app. The Discord Application ID is
 - **Double-click** the tray icon to reopen the window. **Right-click** for: Show window, Start/Stop, Start with Windows, **Quit**.
 - Use **Quit** from the tray menu to fully close the app.
 - **Start with Windows** turns on by default the first time you run the app. You can switch it off in the window or the tray menu.
+
+## Updates
+
+Media RPC checks GitHub Releases shortly after it starts and then every 6 hours. When a newer version exists, the window shows **Update available** with an **Update and restart** button. Nothing is installed until you click it.
+
+What happens when you click:
+
+1. The new `MediaRPC.exe` and its `MediaRPC.exe.sha256` checksum are downloaded from this repository's Releases page.
+2. The download is only installed if the SHA-256 checksum matches, the size looks right and it is a real Windows exe. Otherwise it is discarded.
+3. The running exe is swapped for the new one and Media RPC restarts itself (minimized to the tray if it was hidden). Your settings and "Start with Windows" are kept.
+
+Good to know:
+
+- The check is a single request to the GitHub API. It sends no personal data (GitHub sees your IP address and the app version, like any download). Only HTTPS connections to GitHub are allowed.
+- Turn automatic checks off with **Check for updates automatically** in the window. You can still use **Check for updates** in the tray menu.
+- If the exe sits in a folder that needs administrator rights (like `C:\Program Files`), or you run from source, the button opens the download page instead.
+- The first release that contains the updater must be installed manually. After that, updates are one click.
 
 ## How detection works
 
@@ -102,7 +120,7 @@ To use your own Discord Application, change `CLIENT_ID` in `media_rpc.py`.
 
 ## Build the exe
 
-Pushing a tag that starts with `v` (for example `v1.5.0`), or publishing a release in **Releases > Draft a new release**, triggers GitHub Actions to build `MediaRPC.exe` and attach it to the release.
+Pushing a tag that starts with `v` (for example `v1.6.0`), or publishing a release in **Releases > Draft a new release**, triggers GitHub Actions to build `MediaRPC.exe` and attach it, together with `MediaRPC.exe.sha256`, to the release. The tag becomes the app's version number, and installed copies of Media RPC will offer it as an update once the exe is attached. Use a higher version than the previous release (`v1.6.0` after `v1.5.0`).
 
 Without a tag, run **Actions > Build Windows exe > Run workflow** and download the result from **Artifacts**.
 
@@ -114,6 +132,8 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 | `media_info.py` | Filename parsing and poster / episode lookup |
 | `players.py` | Supported players and window-title detection |
 | `system_integration.py` | Start with Windows and single-instance handling |
+| `updater.py` | Online updates: version check, verified download, exe swap |
+| `app_version.py` | App version (set from the release tag when building) |
 | `app_icon.py` | Generates the app icon |
 
 ## Troubleshooting
