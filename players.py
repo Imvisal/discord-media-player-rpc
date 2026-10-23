@@ -100,8 +100,46 @@ def _exe_name(hwnd):
     return ""
 
 
+PAUSED_TITLE = re.compile(r"\bpaused\b|\[pause\]|⏸", re.I)
+
+# pycaw (Windows audio sessions) - player eke audio stream eka active da balanna.
+# Pause karapu gaman audio session eka inactive wenawa, play karaddi aye active.
+try:
+    from pycaw.pycaw import AudioUtilities
+except Exception:
+    AudioUtilities = None
+
+
+def _audio_state(prefixes):
+    """Player eke audio session eka: True = audio yanawa, False = pause/silent stream nathi,
+    None = audio session ekak nae (dann nae; video ekata audio nathi wage welawata)."""
+    if AudioUtilities is None:
+        return None
+    try:
+        sessions = AudioUtilities.GetAllSessions()
+    except Exception:
+        return None
+    seen = False
+    for session in sessions:
+        try:
+            proc = session.Process
+            name = (proc.name() if proc else "").lower()
+        except Exception:
+            continue
+        if not name.startswith(prefixes):
+            continue
+        seen = True
+        try:
+            if session.State == 1:      # AudioSessionStateActive
+                return True
+        except Exception:
+            pass
+    return False if seen else None
+
+
 def find_playing():
-    """Film play karana player eka hoyanawa. (player_nama, film_nama) ho None."""
+    """Film thiyena player eka hoyanawa.
+    (player_nama, film_nama, paused) ho None. paused = True nam player eka pause karala."""
     found = []
 
     def callback(hwnd, _lparam):
@@ -119,9 +157,15 @@ def find_playing():
             if exe.startswith(player.exe_prefixes):
                 media = extract_media_title(player, buf.value)
                 if media:
-                    found.append((player.name, media))
+                    found.append((player, media, bool(PAUSED_TITLE.search(buf.value))))
                 break
         return True
 
     user32.EnumWindows(EnumWindowsProc(callback), 0)
-    return found[0] if found else None
+    if not found:
+        return None
+    player, media, title_paused = found[0]
+    # Title eke "paused" thiyenawanam pause. Nathnam audio session eka balanawa
+    # (session nathnam playing kiyala hithanawa, false pause wenne nathi wenna).
+    paused = title_paused or (_audio_state(player.exe_prefixes) is False)
+    return player.name, media, paused

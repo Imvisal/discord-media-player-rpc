@@ -22,6 +22,7 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **Start with Windows.** Optional auto-start, minimized to the tray.
 - **One instance only.** Opening it twice just tells you it's already running.
 - **Online updates.** Shows a tray notification when a new version is out and updates itself in one click.
+- **Pause detection.** Shows "Paused" on your Discord card while the video is paused, and the timer continues from where it stopped when you resume.
 
 ## Supported players
 

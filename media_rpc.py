@@ -54,7 +54,8 @@ PROJECT_BUTTON = "Get Media RPC"
 # Rich Presence > Art Assets walata "default_poster" kiyana nama image ekak upload karanna.
 # Upload karala nathnam Discord eka "?" pennanawa (kalin wage).
 FALLBACK_IMAGE = "default_poster"
-POLL_SECONDS = 5      # player check karana gaman (seconds)
+POLL_SECONDS = 3      # player check karana gaman (seconds)
+PAUSE_CONFIRM_POLLS = 2   # pause kiyala hithanna kalin thiyenna ona consecutive polls
 RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
 POSTER_RETRY_SECONDS = 30   # poster nathnam aye hoyala balana gaman (seconds)
 UPDATE_CHECK_SECONDS = 6 * 3600   # aluth version ekak thiyenawada balana gaman
@@ -65,14 +66,16 @@ UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
 
 # ---------------------------------------------------------------- Discord activity
 
-def build_generic_activity(started_at, player_name):
+def build_generic_activity(started_at, player_name, paused=False):
     """Film / series ekak hambune nathnam: file nama pennanne nae, 'Watching PotPlayer' witharai."""
-    kwargs = {"start": started_at}
+    kwargs = {} if paused else {"start": started_at}
     if "name" in UPDATE_PARAMS:
         # aluth pypresence: card eke header eka 'Watching PotPlayer' wenawa
         kwargs["name"] = player_name
     else:
         kwargs["details"] = f"Watching {player_name}"[:128].ljust(2)
+    if paused:
+        kwargs["state"] = "Paused"
     if FALLBACK_IMAGE:
         kwargs["large_image"] = FALLBACK_IMAGE
         kwargs["large_text"] = player_name
@@ -87,16 +90,19 @@ def build_generic_activity(started_at, player_name):
     return kwargs
 
 
-def build_activity(media, started_at, player_name):
+def build_activity(media, started_at, player_name, paused=False):
     if not media.matched:
-        return build_generic_activity(started_at, player_name)
+        return build_generic_activity(started_at, player_name, paused)
     details = media.display_title()
     state = media.subtitle()
+    if paused:
+        state = f"Paused · {state}"
     kwargs = {
         "details": details[:128].ljust(2),
         "state": state[:128].ljust(2),
-        "start": started_at,
     }
+    if not paused:       # pause karapu welawe timer eka pennanne nae
+        kwargs["start"] = started_at
     if media.poster and len(media.poster) <= 256:
         kwargs["large_image"] = media.poster
         kwargs["large_text"] = f"{details} · {player_name}"[:128]
@@ -137,6 +143,13 @@ class RpcWorker(threading.Thread):
         player_name = ""
         started_at = None
         last_lookup = 0.0
+        # Pause / resume tracking: play una welawa witharai gananawa, resume karaddi
+        # kalin thibba thanin patan gannawa.
+        played = 0.0          # pause wenakan play una seconds
+        play_since = None     # dan play wenawanam patan gaththa welawa
+        paused = False
+        pause_seen_at = 0.0
+        pause_polls = 0       # pause kiyala hithanna consecutive polls (flicker nawaththanna)
 
         while not self.stop_event.is_set():
             try:
@@ -154,12 +167,13 @@ class RpcWorker(threading.Thread):
                         media = None
                         self.emit("watching", None)
                 else:
-                    player_name, raw = playing
+                    player_name, raw, paused_now = playing
                     key = (player_name, raw)
                     if key != last_key:
                         # parse + poster hoyanna (palaweni wara tikak welawak yanawa)
                         media = media_info.resolve(raw)
-                        started_at = int(time.time())
+                        played, play_since = 0.0, time.time()
+                        paused, pause_polls = False, 0
                         last_key = key
                         last_lookup = time.time()
                         self.emit("watching", (media, player_name))
@@ -172,7 +186,18 @@ class RpcWorker(threading.Thread):
                         if retry != media:
                             media = retry
                             self.emit("watching", (media, player_name))
-                    rpc.update(**build_activity(media, started_at, player_name))
+                    # pause / resume
+                    now = time.time()
+                    pause_polls = pause_polls + 1 if paused_now else 0
+                    if pause_polls == 1:
+                        pause_seen_at = now      # pause wuna kiyala palaweni wara dakka welawa
+                    if not paused and pause_polls >= PAUSE_CONFIRM_POLLS:
+                        played += pause_seen_at - play_since
+                        play_since, paused = None, True
+                    elif paused and not paused_now:
+                        play_since, paused = now, False
+                    started_at = int((play_since or now) - played)   # resume karaddi kalin thibba thanin
+                    rpc.update(**build_activity(media, started_at, player_name, paused))
             except Exception:
                 # Discord close una / restart una wage welawal
                 try:
