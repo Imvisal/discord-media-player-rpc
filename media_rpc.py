@@ -698,6 +698,8 @@ def main():
     if sysint.is_first_run():
         sysint.set_autostart(True)
         sysint.mark_first_run_done()
+        # Desktop shortcut eka (background thread ekak: PowerShell eka tikak welawak yanawa)
+        threading.Thread(target=sysint.create_desktop_shortcut, daemon=True).start()
 
     root = tk.Tk()
     App(root, start_hidden="--minimized" in sys.argv)

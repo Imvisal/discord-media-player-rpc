@@ -5,6 +5,7 @@ Windows walata special dewal: auto-start (Windows on wenakota run wenna), single
 import ctypes
 import json
 import os
+import subprocess
 import sys
 import time
 
@@ -116,6 +117,41 @@ def refresh_autostart():
             winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, _autostart_command())
     except OSError:
         pass
+
+
+# ---------------------------------------------------------------- desktop shortcut
+
+SHORTCUT_NAME = "Media RPC.lnk"
+
+_SHORTCUT_PS = (
+    "$d=[Environment]::GetFolderPath('Desktop');"
+    "$s=(New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d $env:MRPC_LNK));"
+    "$s.TargetPath=$env:MRPC_TARGET;"
+    "$s.WorkingDirectory=(Split-Path $env:MRPC_TARGET);"
+    "$s.IconLocation=$env:MRPC_TARGET+',0';"
+    "$s.Description='Media RPC';"
+    "$s.Save()"
+)
+
+
+def create_desktop_shortcut():
+    """
+    Desktop eke "Media RPC" shortcut ekak hadanawa (exe eka widiyata run wenakota witharai).
+    OneDrive desktop wage thana walatath wada karanawa. True return karanawa hadapu nam.
+    """
+    if not getattr(sys, "frozen", False) or os.name != "nt":
+        return False
+    try:
+        env = dict(os.environ, MRPC_TARGET=sys.executable, MRPC_LNK=SHORTCUT_NAME)
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+             "-Command", _SHORTCUT_PS],
+            env=env, timeout=20, capture_output=True,
+            creationflags=0x08000000,          # CREATE_NO_WINDOW
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------- single instance

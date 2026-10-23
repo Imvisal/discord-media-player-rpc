@@ -19,6 +19,7 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **Smart filename cleanup.** Strips release noise such as `1080p`, `x265`, `BluRay`, `English`, `Sinhala Sub` and site tags like `[CineSubz.com]`.
 - **Safe matching.** A poster is only used when the title (and year) really match your file, so you never get the wrong film's artwork.
 - **System tray.** Closing the window keeps the app running quietly in the tray.
+- **Desktop shortcut.** The first time you open the exe, it adds a "Media RPC" shortcut to your desktop.
 - **Start with Windows.** Optional auto-start, minimized to the tray.
 - **One instance only.** Opening it twice just tells you it's already running.
 - **Online updates.** Shows a tray notification when a new version is out and updates itself in one click.
