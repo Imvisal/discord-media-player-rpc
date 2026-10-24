@@ -8,9 +8,14 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
   <img src="assets/logo.png" alt="Media RPC logo" width="96">
 </p>
 <p align="center">
-  <img src="assets/showcase.png" alt="Three Discord cards: a film with poster and progress bar, a series with season, episode and episode title, and a member list entry showing the film being watched" width="800">
+  <img src="assets/card-movie.png" alt="Discord Watching card for a film: poster, title with year and a live progress bar" width="49%">
+  <img src="assets/card-series.png" alt="Discord Watching card for the series Silo: season 1 episode 2 and the episode title" width="49%">
 </p>
-<p align="center"><sub>Movies, series with episode names, and the member list. Illustrative render of the Discord cards.</sub></p>
+<p align="center">
+  <img src="assets/card-series-2.png" alt="Discord Watching card for the series The Mentalist with episode title and progress bar" width="49%">
+  <img src="assets/card-members.png" alt="A server member list entry showing the film that member is watching" width="49%">
+</p>
+<p align="center"><sub>Movies with a live progress bar, series with season, episode and episode name, and right in the server member list. Illustrative render of the Discord cards.</sub></p>
 
 ## Features
 

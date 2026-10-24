@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
 
@@ -54,10 +55,6 @@
 
     </section>
 
-    <!-- SHOWCASE -->
-    <section class="container showcase" aria-label="What it looks like on Discord">
-      <img src="showcase.webp" alt="Three Discord cards: a film with poster and progress bar, a series with season, episode and episode title, and a member list entry showing the film being watched" width="2170" height="725">
-    </section>
 
     <!-- STATS -->
     <section class="container" aria-label="Project stats">
@@ -80,6 +77,30 @@
         </div>
       </div>
       <p class="stats-note" id="statsNote">Live numbers from GitHub Releases.</p>
+    </section>
+
+    <!-- GALLERY -->
+    <section id="preview" class="section container">
+      <p class="label reveal">Preview</p>
+      <h2 class="section-title reveal">What your friends see.</h2>
+      <div class="gallery">
+        <figure class="gal-item">
+          <img class="reveal" style="--d:.05s" src="card-movie.webp" alt="Discord Watching card for a film: poster, title with year and a live progress bar" width="1400" height="454" loading="lazy">
+          <figcaption class="reveal" style="--d:.15s">Movies: poster, year and a live progress bar.</figcaption>
+        </figure>
+        <figure class="gal-item">
+          <img class="reveal" style="--d:.15s" src="card-series.webp" alt="Discord Watching card for the series Silo: season 1 episode 2 and the episode title" width="1400" height="495" loading="lazy">
+          <figcaption class="reveal" style="--d:.25s">Series: season, episode and the episode's name.</figcaption>
+        </figure>
+        <figure class="gal-item">
+          <img class="reveal" style="--d:.05s" src="card-series-2.webp" alt="Discord Watching card for the series The Mentalist with episode title and progress bar" width="1400" height="470" loading="lazy">
+          <figcaption class="reveal" style="--d:.15s">Any show, any episode.</figcaption>
+        </figure>
+        <figure class="gal-item">
+          <img class="reveal" style="--d:.15s" src="card-members.webp" alt="A server member list entry showing the film that member is watching" width="1400" height="272" loading="lazy">
+          <figcaption class="reveal" style="--d:.25s">Right in the server member list.</figcaption>
+        </figure>
+      </div>
     </section>
 
     <!-- FEATURES -->

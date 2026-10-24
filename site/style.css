@@ -71,14 +71,6 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 .btn-ghost:hover { border-color: var(--muted); }
 
 
-/* showcase */
-.showcase { position: relative; margin-bottom: 56px; }
-.showcase::before {
-  content: ""; position: absolute; inset: -30px 8% -30px; z-index: -1;
-  background: radial-gradient(closest-side, var(--glow), transparent);
-}
-.showcase img { width: 100%; height: auto; border-radius: 20px; border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.55); background: #0b0d12; }
-
 /* stats */
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
 .stat { padding: 26px 24px; border-right: 1px solid var(--divider); }
@@ -116,6 +108,17 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 .faq details[open] summary::after { transform: rotate(45deg); }
 .faq details p { margin-top: 12px; color: var(--muted); max-width: 70ch; }
 
+/* gallery + scroll reveal */
+.gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 36px 28px; align-items: center; margin-top: 40px; }
+.gal-item { margin: 0; }
+/* the screenshots have a near-black background: 'lighten' lets the page colour show through,
+   so the cards look like part of the page instead of dark boxes */
+.gal-item img { width: 100%; height: auto; display: block; mix-blend-mode: lighten; }
+.gal-item figcaption { margin-top: 10px; font-family: var(--font-mono); font-size: 13px; color: var(--faint); }
+
+.js .reveal { opacity: 0; transform: translateY(26px) scale(.985); transition: opacity .7s ease var(--d, 0s), transform .7s cubic-bezier(.2,.7,.2,1) var(--d, 0s); }
+.js .reveal.in { opacity: 1; transform: none; }
+
 /* footer */
 .site-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 110px; padding: 28px 0 40px; border-top: 1px solid var(--divider); color: var(--faint); font-size: 14px; }
 .site-footer a { text-decoration: none; }
@@ -123,6 +126,7 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 
 /* responsive */
 @media (max-width: 860px) {
+  .gallery { grid-template-columns: 1fr; }
   .hero { padding-top: 32px; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .stat:nth-child(2) { border-right: 0; }
@@ -132,5 +136,6 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .js .reveal { opacity: 1; transform: none; }
   * { transition: none !important; }
 }
