@@ -48,7 +48,7 @@ WEAK_TAGS = LANG_TAGS | {
 EPISODE_PATTERNS = [
     re.compile(r"\bS(\d{1,2})\s?E(\d{1,3})(?!\d)", re.I),
     re.compile(r"\bSeason\s*(\d{1,2})\s*Episode\s*(\d{1,3})(?!\d)", re.I),
-    re.compile(r"\b(\d{1,2})x(\d{2,3})(?!\d)", re.I),
+    re.compile(r"\b(\d{1,2})x(\d{1,3})(?!\d)", re.I),
     re.compile(r"\s-\s(\d{1,3})(?:v\d)?(?=\s|$)"),          # anime: "Show - 05"
 ]
 

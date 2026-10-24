@@ -84,12 +84,17 @@ def extract_title(tab, site):
     index = tab.lower().find(site.lower())
     if index < 0:
         return None
-    text = f"{tab[:index]} {tab[index + len(site):]}"
-    text = _DOUBLE_SEP.sub(" - ", text)
-    text = _NOISE.sub(" ", text)
-    text = _DOUBLE_SEP.sub(" - ", re.sub(r"\s+", " ", text))
-    text = _EDGE_PUNCT.sub("", text).strip()
-    return text if len(text) >= 2 else None
+    before, after = tab[:index], tab[index + len(site):]
+    # "Film - Site - tagline": the film is what comes before the site name. Only when nothing
+    # useful is before it ("Site - Film") use what comes after it.
+    for part in (before, after):
+        text = _DOUBLE_SEP.sub(" - ", part)
+        text = _NOISE.sub(" ", text)
+        text = _DOUBLE_SEP.sub(" - ", re.sub(r"\s+", " ", text))
+        text = _EDGE_PUNCT.sub("", text).strip()
+        if len(text) >= 2:
+            return text
+    return None
 
 
 def match_site(tab, sites):
