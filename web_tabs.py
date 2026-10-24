@@ -97,6 +97,15 @@ def extract_title(tab, site):
     return None
 
 
+def guess_title(tab):
+    """Film name from a tab title on a site we don't know: the part before the first
+    " - " / " | " (that is where sites put their own name), minus filler words."""
+    first = re.split(r"\s[-\u2013\u2014|\u00b7\u2022]\s", tab.strip(), 1)[0]
+    text = re.sub(r"\s+", " ", _NOISE.sub(" ", first))
+    text = _EDGE_PUNCT.sub("", text).strip()
+    return text if 2 <= len(text) <= 100 else None
+
+
 def match_site(tab, sites):
     """(site, title) for the first listed site found in the tab title, else None."""
     for site in sites:

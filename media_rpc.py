@@ -202,8 +202,9 @@ class RpcWorker(threading.Thread):
                 if cfg_now != last_cfg:
                     last_cfg, last_sent = cfg_now, None
 
-                web_sites = web_tabs.parse_sites(cfg.get("web_sites")) if cfg.get("web_enabled") else None
-                playing = players.find_playing(web_sites or None)
+                web_on = bool(cfg.get("web_enabled"))
+                web_sites = web_tabs.parse_sites(cfg.get("web_sites")) if web_on else None
+                playing = players.find_playing(web_sites or None, any_site=web_on and not web_sites)
                 if playing is not None and playing.site and not media_info.resolve(playing.title).matched:
                     # Listed site, but this tab isn't a film or series (home page, search, ...): ignore it.
                     # The lookup is cached, so this doesn't hit the network on every poll.

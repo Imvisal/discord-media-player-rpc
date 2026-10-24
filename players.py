@@ -169,10 +169,11 @@ def _visible_windows():
     return windows
 
 
-def find_playing(web_sites=None):
+def find_playing(web_sites=None, any_site=False):
     """Film thiyena player eka hoyanawa.
     Playing(player, title, paused, hwnd, site) ho None. paused = True nam player eka pause karala.
     web_sites = browser tab walin balanna ona site nam (Settings); None nam browsers balanne nae.
+    any_site = site list eka nathuwa: sound eka enawa browser tab ekak film ekak da kiyala balanawa.
     Video player ekak thiyenawanam eka ma issellama; browser eka passe."""
     found = []
     web_found = []
@@ -185,11 +186,16 @@ def find_playing(web_sites=None):
                     found.append((player, media, bool(PAUSED_TITLE.search(title)), hwnd))
                 break
         else:
-            browser = web_tabs.browser_for_exe(exe) if web_sites else None
+            browser = web_tabs.browser_for_exe(exe) if (web_sites or any_site) else None
             tab = web_tabs.tab_title(browser, title) if browser else None
-            hit = web_tabs.match_site(tab, web_sites) if tab else None
+            hit = web_tabs.match_site(tab, web_sites) if (tab and web_sites) else None
             if hit:
                 web_found.append((browser, hit[0], hit[1], hwnd))
+            elif tab and any_site and not web_sites:
+                # Only a tab that is making sound is looked at: nothing is searched for silent tabs
+                guess = web_tabs.guess_title(tab)
+                if guess and _audio_state(browser.exe_prefixes) is True:
+                    web_found.append((browser, browser.name, guess, hwnd))
 
     if found:
         player, media, title_paused, hwnd = found[0]

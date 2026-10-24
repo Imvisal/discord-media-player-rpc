@@ -81,9 +81,10 @@ class SettingsWindow:
 
     def _build_websites(self, page):
         self._check(page, "web_enabled", "Detect films on websites in my browser",
-                    "Reads the tab title of Chrome, Edge, Firefox, Brave, Opera and Vivaldi, and only "
-                    "for the sites you list below. Other tabs are ignored.")
-        tk.Label(page, text="Sites to watch for, one per line, as written in the tab title:",
+                    "Reads the tab title of Chrome, Edge, Firefox, Brave, Opera and Vivaldi. Leave the "
+                    "list empty to detect any site: only a tab that is playing sound is looked at, "
+                    "and only a real film or series is shown.")
+        tk.Label(page, text="Optional: only these sites, one per line, as written in the tab title:",
                  bg=BG, fg=TEXT, font=(FONT, 9), justify="left", wraplength=WRAP).pack(anchor="w",
                                                                                      pady=(6, 4))
         self.sites_box = tk.Text(page, height=5, width=42, bg=CARD, fg=TEXT, insertbackground=TEXT,

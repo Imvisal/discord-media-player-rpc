@@ -131,10 +131,11 @@ Open **Settings** in the app window (or the tray menu). Checkboxes apply immedia
 
 ## Films on websites
 
-Media RPC can also show a film you're watching **in your browser** (Chrome, Edge, Firefox, Brave, Opera, Vivaldi). It is off by default and works only for the sites you choose.
+Media RPC can also show a film you're watching **in your browser** (Chrome, Edge, Firefox, Brave, Opera, Vivaldi). It is off by default.
 
 1. Open **Settings > Websites** and tick **Detect films on websites in my browser**.
-2. Type the site's name, one per line, **as it appears in the tab title** (for example `CineSubz` if the tab reads "Prisoners (2013) - CineSubz").
+2. **Any site:** leave the list empty. Media RPC then looks only at a browser tab that is **playing sound** and takes the film name from the start of its title (before the first " - " or " | "). Silent tabs are never read or searched.
+   **Only some sites:** type the site's name, one per line, **as it appears in the tab title** (for example `CineSubz`). Only those tabs are used, even without sound.
 3. Press **What do I see now?** to check: it lists the tab of each browser window and the film title Media RPC would use.
 
 How it decides what to show:
