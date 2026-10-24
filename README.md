@@ -8,9 +8,17 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
   <img src="assets/logo.png" alt="Media RPC logo" width="96">
 </p>
 <p align="center">
-  <img src="assets/preview.png" alt="Media RPC showing a film as a Watching card on a Discord profile" width="300">
+  <img src="assets/card-movie.png" alt="Discord Watching card for a film: poster, title with year and a progress bar" width="340"><br>
+  <sub>Movies: poster, title with year and a live progress bar.</sub>
 </p>
-<p align="center"><sub>Example: a film playing in PotPlayer, shown on a Discord profile.</sub></p>
+<p align="center">
+  <img src="assets/card-series.png" alt="Discord Watching card for a series: poster, season, episode and episode title with a progress bar" width="340"><br>
+  <sub>Series: season, episode and the episode's name.</sub>
+</p>
+<p align="center">
+  <img src="assets/card-members.png" alt="A server member list entry showing the film that member is watching" width="340"><br>
+  <sub>Everyone in the server sees what you're watching in the member list.</sub>
+</p>
 
 ## Features
 
