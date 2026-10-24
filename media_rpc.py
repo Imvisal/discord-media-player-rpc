@@ -27,6 +27,7 @@ import players
 import settings_window
 import system_integration as sysint
 import updater
+import web_tabs
 from theme import (ACCENT, ACCENT_HOVER, BG, CARD, CARD_HOVER, ERROR, GREEN, MUTED, RED,
                    RED_HOVER, TEXT, YELLOW)
 
@@ -201,7 +202,12 @@ class RpcWorker(threading.Thread):
                 if cfg_now != last_cfg:
                     last_cfg, last_sent = cfg_now, None
 
-                playing = players.find_playing()
+                web_sites = web_tabs.parse_sites(cfg.get("web_sites")) if cfg.get("web_enabled") else None
+                playing = players.find_playing(web_sites or None)
+                if playing is not None and playing.site and not media_info.resolve(playing.title).matched:
+                    # Listed site, but this tab isn't a film or series (home page, search, ...): ignore it.
+                    # The lookup is cached, so this doesn't hit the network on every poll.
+                    playing = None
                 if playing is None:
                     if last_key is not None:
                         rpc.clear()
@@ -231,8 +237,10 @@ class RpcWorker(threading.Thread):
 
                     # Player eken position + duration (progress bar ekata)
                     show_progress = bool(cfg.get("show_progress"))
-                    pb = playback.read(player_name, playing.hwnd, cfg) if show_progress else None
-                    self.emit("progress", (pb, playback.hint(player_name, pb, show_progress)))
+                    is_web = bool(playing.site)       # a browser tab can't tell us the position
+                    pb = (playback.read(player_name, playing.hwnd, cfg)
+                          if show_progress and not is_web else None)
+                    self.emit("progress", (pb, playback.hint(player_name, pb, show_progress, is_web)))
 
                     # pause / resume. Player eka thamai pause kiyala kiwwoth eka dan ma shiyawenawa.
                     now = time.time()

@@ -14,6 +14,8 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from typing import NamedTuple
 
+import web_tabs
+
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 VIDEO_EXT = re.compile(
@@ -34,6 +36,7 @@ class Playing(NamedTuple):
     title: str          # film / file name taken from the window title
     paused: bool        # best guess from the title / audio session
     hwnd: int           # the player's window (PotPlayer's position is read through it)
+    site: str = ""      # set when this is a website in a browser (player.name is then the site name)
 
 
 PLAYERS = (
@@ -145,10 +148,9 @@ def _audio_state(prefixes):
     return False if seen else None
 
 
-def find_playing():
-    """Film thiyena player eka hoyanawa.
-    Playing(player, title, paused, hwnd) ho None. paused = True nam player eka pause karala."""
-    found = []
+def _visible_windows():
+    """[(hwnd, window title, process exe name)] for every visible window that has a title."""
+    windows = []
 
     def callback(hwnd, _lparam):
         if not user32.IsWindowVisible(hwnd):
@@ -159,21 +161,56 @@ def find_playing():
         buf = ctypes.create_unicode_buffer(length + 1)
         user32.GetWindowTextW(hwnd, buf, length + 1)
         exe = _exe_name(hwnd)
-        if not exe:
-            return True
-        for player in PLAYERS:
-            if exe.startswith(player.exe_prefixes):
-                media = extract_media_title(player, buf.value)
-                if media:
-                    found.append((player, media, bool(PAUSED_TITLE.search(buf.value)), hwnd))
-                break
+        if exe:
+            windows.append((hwnd, buf.value, exe))
         return True
 
     user32.EnumWindows(EnumWindowsProc(callback), 0)
-    if not found:
-        return None
-    player, media, title_paused, hwnd = found[0]
-    # Title eke "paused" thiyenawanam pause. Nathnam audio session eka balanawa
-    # (session nathnam playing kiyala hithanawa, false pause wenne nathi wenna).
-    paused = title_paused or (_audio_state(player.exe_prefixes) is False)
-    return Playing(player, media, paused, hwnd)
+    return windows
+
+
+def find_playing(web_sites=None):
+    """Film thiyena player eka hoyanawa.
+    Playing(player, title, paused, hwnd, site) ho None. paused = True nam player eka pause karala.
+    web_sites = browser tab walin balanna ona site nam (Settings); None nam browsers balanne nae.
+    Video player ekak thiyenawanam eka ma issellama; browser eka passe."""
+    found = []
+    web_found = []
+
+    for hwnd, title, exe in _visible_windows():
+        for player in PLAYERS:
+            if exe.startswith(player.exe_prefixes):
+                media = extract_media_title(player, title)
+                if media:
+                    found.append((player, media, bool(PAUSED_TITLE.search(title)), hwnd))
+                break
+        else:
+            browser = web_tabs.browser_for_exe(exe) if web_sites else None
+            tab = web_tabs.tab_title(browser, title) if browser else None
+            hit = web_tabs.match_site(tab, web_sites) if tab else None
+            if hit:
+                web_found.append((browser, hit[0], hit[1], hwnd))
+
+    if found:
+        player, media, title_paused, hwnd = found[0]
+        # Title eke "paused" thiyenawanam pause. Nathnam audio session eka balanawa
+        # (session nathnam playing kiyala hithanawa, false pause wenne nathi wenna).
+        paused = title_paused or (_audio_state(player.exe_prefixes) is False)
+        return Playing(player, media, paused, hwnd)
+    if web_found:
+        browser, site, title, hwnd = web_found[0]
+        # Browser eke tab eka audio play karanawada kiyala pause guess ekak
+        paused = _audio_state(browser.exe_prefixes) is False
+        return Playing(Player(site, browser.exe_prefixes, ""), title, paused, hwnd, site)
+    return None
+
+
+def browser_tabs():
+    """[(browser name, active tab title)] for every browser window. Used by the Settings 'check' button."""
+    tabs = []
+    for _hwnd, title, exe in _visible_windows():
+        browser = web_tabs.browser_for_exe(exe)
+        tab = web_tabs.tab_title(browser, title) if browser else None
+        if tab:
+            tabs.append((browser.name, tab))
+    return tabs

@@ -174,8 +174,10 @@ def read(player_name, hwnd, cfg):
     return None
 
 
-def hint(player_name, playback, enabled=True):
+def hint(player_name, playback, enabled=True, web=False):
     """One line for the window: whether the progress bar works for this player."""
+    if web:
+        return "Website tab: showing an elapsed timer (a browser can't share the video position)"
     if not enabled:
         return "Progress bar is off (Settings)"
     if playback is not None:

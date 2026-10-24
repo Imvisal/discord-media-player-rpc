@@ -30,6 +30,7 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **Online updates.** Shows a tray notification when a new version is out and updates itself in one click.
 - **Pause detection.** Shows "Paused" on your Discord card while the video is paused, and the timer continues from where it stopped when you resume.
 - **Progress bar.** For PotPlayer, VLC, MPC-HC and MPC-BE the card shows a real progress bar that follows seeking (VLC and MPC need their web interface switched on once, see [Progress bar](#progress-bar)).
+- **Films on websites.** Optionally detects films playing in your browser, for the sites you list (see [Films on websites](#films-on-websites)).
 - **Settings.** Hide the status while paused, hide the button, or use privacy mode to keep the film name off Discord (see [Settings](#settings)).
 
 ## Supported players
@@ -124,8 +125,30 @@ Open **Settings** in the app window (or the tray menu). Checkboxes apply immedia
 | --- | --- |
 | Hide my status while the video is paused | Removes the card from Discord while paused and brings it back when you resume. Off: the card says "Paused". |
 | Hide the "Get Media RPC" button | Removes the button from the card. |
-| Privacy mode: hide the film name | Discord only shows "Watching <player>". No title, poster or episode, and the file name is not looked up online. The progress bar still works. |
+| Privacy mode: hide the film name | Discord only shows "Watching <player>". No title, poster or episode, and a local file's name is not looked up online. The progress bar still works. |
+| Detect films on websites in my browser | See [Films on websites](#films-on-websites). |
 | Show a progress bar when the player allows it | See [Progress bar](#progress-bar). |
+
+## Films on websites
+
+Media RPC can also show a film you're watching **in your browser** (Chrome, Edge, Firefox, Brave, Opera, Vivaldi). It is off by default and works only for the sites you choose.
+
+1. Open **Settings > Websites** and tick **Detect films on websites in my browser**.
+2. Type the site's name, one per line, **as it appears in the tab title** (for example `CineSubz` if the tab reads "Prisoners (2013) - CineSubz").
+3. Press **What do I see now?** to check: it lists the tab of each browser window and the film title Media RPC would use.
+
+How it decides what to show:
+
+- A browser window's title is the title of the tab you're looking at. Media RPC only reads tabs whose title contains a site you listed, removes the site name and filler words like "Watch" and "Online", then **checks the title online** (TVmaze, iTunes, IMDb, Wikipedia). It's only shown on Discord if it's a real film or series, so home pages, search pages and other tabs are ignored.
+- **Privacy mode** still hides the title on Discord (it shows "Watching <site>"), but the online check still happens for listed sites, because otherwise every page of the site would show up.
+- Pause is guessed from whether the browser is playing sound.
+
+Limits:
+
+- Sites that don't put the film name in the tab title can't be detected. Netflix, for example, shows just "Netflix".
+- A browser can't share the video's position, so the card shows an elapsed timer, not a progress bar.
+- Each browser window only exposes its active tab. Switch to another tab and the status goes away.
+- The tab titles of unlisted sites are never stored or sent anywhere.
 
 ## The "Get Media RPC" button
 
@@ -175,6 +198,7 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 | `media_rpc.py` | App window, tray and the Discord Rich Presence worker |
 | `media_info.py` | Filename parsing and poster / episode lookup |
 | `players.py` | Supported players and window-title detection |
+| `web_tabs.py` | Reads film names from browser tab titles, for the sites you list |
 | `playback.py` | Playback position and length for the progress bar (PotPlayer, VLC, MPC-HC/BE) |
 | `settings_window.py` | The Settings window |
 | `app_settings.py` | Settings shared between the window and the Discord worker |
@@ -197,4 +221,5 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 - Windows only.
 - Pause is read from the player where possible (PotPlayer, VLC, MPC) and otherwise guessed from the window title and the player's audio, so it can be a few seconds late.
 - The progress bar needs a player that reports its position (see [Progress bar](#progress-bar)); the others get an elapsed timer.
+- Websites are detected by tab title only, so only sites that put the film name there work, and there's no progress bar for them (see [Films on websites](#films-on-websites)).
 - Discord shows your PC's status whatever device you're using. If you leave a player open (even paused) and go play on your phone, the card stays visible. Use **Hide my status while the video is paused**, or close the player.
