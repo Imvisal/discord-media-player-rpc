@@ -54,7 +54,7 @@ CLIENT_ID = "1561956752105283635"
 APP_TITLE = "Media RPC"
 
 # Discord card eke "Get Media RPC" button eka yana link eka (Steam eke "Get on Steam" wage).
-PROJECT_URL = "https://github.com/Imvisal/discord-media-player-rpc"
+PROJECT_URL = "https://discord-media-player-rpc-site.vercel.app/"   # button on the Discord card: the download site
 PROJECT_BUTTON = "Get Media RPC"
 # Poster nathi welawata pennana image eka: Discord Developer Portal > oyage application >
 # Rich Presence > Art Assets walata "default_poster" kiyana nama image ekak upload karanna.
