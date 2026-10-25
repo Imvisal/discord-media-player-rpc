@@ -127,6 +127,8 @@ def build_activity(media, started_at, end, player_name, paused=False, privacy=Fa
         "details": details[:128].ljust(2),
         "state": state[:128].ljust(2),
     }
+    if "name" in UPDATE_PARAMS:
+        kwargs["name"] = player_name     # card header: "Watching Chrome" / "Watching VLC"
     _timestamps(kwargs, started_at, end, paused)
     if media.poster and len(media.poster) <= 256:
         kwargs["large_image"] = media.poster
