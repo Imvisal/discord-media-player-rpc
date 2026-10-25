@@ -169,10 +169,11 @@ def _visible_windows():
     return windows
 
 
-def find_playing(web_sites=None, any_site=False):
+def find_playing(web_sites=None, any_site=False, youtube=False):
     """Film thiyena player eka hoyanawa.
     Playing(player, title, paused, hwnd, site) ho None. paused = True nam player eka pause karala.
     web_sites = browser tab walin balanna ona site nam (Settings); None nam browsers balanne nae.
+    youtube = YouTube tab walin film / series detect karanna (Settings checkbox eka).
     any_site = site list eka nathuwa: sound eka enawa browser tab ekak film ekak da kiyala balanawa.
     Video player ekak thiyenawanam eka ma issellama; browser eka passe."""
     found = []
@@ -186,8 +187,14 @@ def find_playing(web_sites=None, any_site=False):
                     found.append((player, media, bool(PAUSED_TITLE.search(title)), hwnd))
                 break
         else:
-            browser = web_tabs.browser_for_exe(exe) if (web_sites or any_site) else None
+            browser = web_tabs.browser_for_exe(exe) if (web_sites or any_site or youtube) else None
             tab = web_tabs.tab_title(browser, title) if browser else None
+            if tab and web_tabs.is_youtube(tab):
+                # YouTube is only used when its own checkbox is on, and only while it makes sound
+                guess = web_tabs.youtube_title(tab) if youtube else None
+                if guess and _audio_state(browser.exe_prefixes) is True:
+                    web_found.append((browser, "YouTube", guess, hwnd))
+                continue
             hit = web_tabs.match_site(tab, web_sites) if (tab and web_sites) else None
             if hit:
                 web_found.append((browser, hit[0], hit[1], hwnd))

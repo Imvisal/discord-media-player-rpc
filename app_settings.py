@@ -18,6 +18,7 @@ DEFAULTS = {
     "vlc_password": "",
     "mpc_port": 13579,           # MPC-HC / MPC-BE web interface
     "web_enabled": False,        # detect films on websites in the browser (tab title)
+    "web_youtube": False,        # also detect films / series playing on YouTube
     "web_sites": [],             # site names to look for in the tab title
 }
 

@@ -106,6 +106,29 @@ def guess_title(tab):
     return text if 2 <= len(text) <= 100 else None
 
 
+YOUTUBE_SUFFIX = re.compile(r"\s+[-\u2013\u2014|]\s+YouTube\s*$", re.I)
+_YT_NOISE = re.compile(
+    r"\b(?:official|full|new|latest|hd|4k|1080p|720p|trailer|teaser|clip|scene|scenes|"
+    r"movie|film|episode|series|promo|sinhala|english|hindi|tamil|subtitles?|subbed|dubbed)\b"
+    r"(?!\s*\d)|[\[(]\s*(?:official|hd|4k|full)[^\])]*[\])]",
+    re.I,
+)
+
+
+def is_youtube(tab):
+    return bool(YOUTUBE_SUFFIX.search(tab or ""))
+
+
+def youtube_title(tab):
+    """Film or series name from a YouTube tab title ("Carrie (2013) Official Trailer - YouTube").
+    The online lookup decides whether it really is a film or series."""
+    text = YOUTUBE_SUFFIX.sub("", tab or "")
+    text = re.split(r"\s[|\u2013\u2014]\s|\s-\s(?=[^-]*$)", text, 1)[0] if len(text) > 60 else text
+    text = re.sub(r"\s+", " ", re.sub(r"#\d+", " ", _YT_NOISE.sub(" ", text)))
+    text = _EDGE_PUNCT.sub("", text).strip()
+    return text if 2 <= len(text) <= 100 else None
+
+
 def match_site(tab, sites):
     """(site, title) for the first listed site found in the tab title, else None."""
     for site in sites:

@@ -135,6 +135,7 @@ Media RPC can also show a film you're watching **in your browser** (Chrome, Edge
 
 1. Open **Settings > Websites** and tick **Detect films on websites in my browser**.
 2. **Any site:** leave the list empty. Media RPC then looks only at a browser tab that is **playing sound** and takes the film name from the start of its title (before the first " - " or " | "). Silent tabs are never read or searched.
+3. **YouTube:** off by default, so YouTube tabs are ignored. Tick "Also detect films and series on YouTube" in Settings > Websites to include them. Only a YouTube tab that is playing sound is looked at, words like "Official Trailer" and "Full Movie" are dropped from the title, and it is shown only if it is a real film or series.
    **Only some sites:** type the site's name, one per line, **as it appears in the tab title** (for example `CineSubz`). Only those tabs are used, even without sound.
 3. Press **What do I see now?** to check: it lists the tab of each browser window and the film title Media RPC would use.
 

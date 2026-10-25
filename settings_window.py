@@ -84,6 +84,9 @@ class SettingsWindow:
                     "Reads the tab title of Chrome, Edge, Firefox, Brave, Opera and Vivaldi. Leave the "
                     "list empty to detect any site: only a tab that is playing sound is looked at, "
                     "and only a real film or series is shown.")
+        self._check(page, "web_youtube", "Also detect films and series on YouTube",
+                    "Off by default. Only a YouTube tab that is playing sound is looked at, and "
+                    "only a real film or series is shown.")
         tk.Label(page, text="Optional: only these sites, one per line, as written in the tab title:",
                  bg=BG, fg=TEXT, font=(FONT, 9), justify="left", wraplength=WRAP).pack(anchor="w",
                                                                                      pady=(6, 4))
