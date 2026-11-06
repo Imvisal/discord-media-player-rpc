@@ -205,7 +205,7 @@ class RpcWorker(threading.Thread):
                     last_sent, shown = None, False
 
                 # Card eka penna widiya wenas karana settings wenas unoth aye yawanna
-                cfg_now = (bool(cfg.get("hide_button")), bool(cfg.get("hide_when_paused")),
+                cfg_now = (bool(cfg.get("hide_when_paused")),
                            bool(cfg.get("show_progress")), bool(cfg.get("show_extra")))
                 if cfg_now != last_cfg:
                     last_cfg, last_sent = cfg_now, None
@@ -284,8 +284,7 @@ class RpcWorker(threading.Thread):
                             else:
                                 started_at = int((play_since or now) - played)
                         activity = build_activity(media, started_at, end, player_name, paused,
-                                                  privacy, bool(cfg.get("hide_button")),
-                                                  bool(cfg.get("show_extra")))
+                                                  privacy, show_extra=bool(cfg.get("show_extra")))
                         if (not same_activity(activity, last_sent)
                                 and (last_sent is None or now - last_sent_at >= MIN_UPDATE_SECONDS)):
                             rpc.update(**activity)

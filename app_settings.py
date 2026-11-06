@@ -13,7 +13,6 @@ DEFAULTS = {
     "show_progress": True,       # show a progress bar when the player can report its position
     "hide_when_paused": False,   # remove the Discord status while the video is paused
     "show_extra": True,          # show genre and rating next to the title (when found)
-    "hide_button": False,        # hide the "Get Media RPC" button
     "privacy_mode": False,       # never show the title / poster: only "Watching <player>"
     "vlc_port": 8080,            # VLC web interface
     "vlc_password": "",
