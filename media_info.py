@@ -3,7 +3,7 @@ File nama eken film / TV series / episode eka hoyagena poster eka online hoyana 
 
 - Nama parse karanawa (S01E01, 1x01, "Show - 05", year) saha quality / language / site tags
   (720p, x265, English, WEB-[CineSubz.com] wage) ain karanawa.
-- TV series: TVmaze -> IMDb. Film: iTunes Search -> IMDb -> Wikipedia. (API key one nae)
+- TV series: TVmaze -> AniList (anime) -> IMDb. Anime-looking files try AniList first. Film: iTunes Search -> IMDb -> Wikipedia. (API key one nae)
 - Hoyagaththa nama file eke namata hariyatama sasandenawa. Hariyata sasanda nathnam poster eka
   denne nae (wen film / series ekak pennanawata wada poster nathuwa title witharak pennana eka better).
 - Network fail unath app eka nawathinne nae. Poster nathnam parana tika welawakin aye try karanawa.
@@ -73,6 +73,9 @@ class Media:
     info_url: Optional[str] = None      # TVmaze / Apple TV / IMDb page eka
     info_label: Optional[str] = None
     matched: bool = False               # True = online (TVmaze/iTunes/IMDb/Wikipedia) film / series ekak widihata hambuna
+    anime: bool = False                 # file nama anime wage ("Show - 05"): AniList eken kalin hoyanawa
+    genres: Optional[str] = None        # "Action, Comedy"
+    rating: Optional[float] = None      # 0-10
 
     @property
     def is_series(self):
@@ -94,6 +97,15 @@ class Media:
         if self.episode_title:
             text += f" · {self.episode_title}"
         return text
+
+    def extra(self):
+        """'Action, Comedy · ★ 7.4' (genre + rating, whichever we found). Empty string if neither."""
+        bits = []
+        if self.genres:
+            bits.append(self.genres)
+        if self.rating:
+            bits.append(f"\u2605 {self.rating:.1f}")
+        return " \u00b7 ".join(bits)
 
 
 # ---------------------------------------------------------------- parsing
@@ -154,6 +166,7 @@ def parse_filename(raw):
     cut = None
     kind = None          # title eka kapapu thana: episode / year / tag
 
+    anime = False
     for pat in EPISODE_PATTERNS:
         m = pat.search(s)
         if m and m.start() > 0:
@@ -163,6 +176,7 @@ def parse_filename(raw):
             else:
                 episode = int(groups[0])
             cut, kind = m.start(), "episode"
+            anime = pat is EPISODE_PATTERNS[-1]          # "Show - 05" style = usually anime
             break
 
     if cut is None:
@@ -194,7 +208,7 @@ def parse_filename(raw):
         title = _strip_trailing_tags(title, force=(kind == "tag" or trailing_group))
 
     title = title.strip(" -–—:,") or _tidy(s) or raw
-    return Media(title=title, year=year, season=season, episode=episode)
+    return Media(title=title, year=year, season=season, episode=episode, anime=anime)
 
 
 # ---------------------------------------------------------------- title matching
@@ -239,6 +253,30 @@ def _get_json(url):
         return json.load(resp)
 
 
+def _genres(value, limit=2):
+    """['Drama', 'Crime', 'Thriller'] or 'Drama' -> 'Drama, Crime'."""
+    if isinstance(value, str):
+        value = [value]
+    names = [str(v).strip() for v in (value or []) if v and str(v).strip()]
+    return ", ".join(names[:limit]) or None
+
+
+def _score(value):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    return round(value, 1) if value > 0 else None
+
+
+def _post_json(url, payload):
+    data = json.dumps(payload).encode("utf-8")
+    headers = dict(USER_AGENT, **{"Content-Type": "application/json", "Accept": "application/json"})
+    req = urllib.request.Request(url, data=data, headers=headers)
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        return json.load(resp)
+
+
 def _hires_itunes(url):
     """iTunes artwork: 100x100 thumbnail -> big version (Discord shows it sharp on HiDPI screens)."""
     return re.sub(r"/\d+x\d+(?:bb|sr)?\.(jpg|png|webp)$", r"/1000x1000bb.\1", url)
@@ -273,6 +311,8 @@ def _tvmaze(media):
         poster=image.get("original") or image.get("medium"),
         info_url=show.get("url"),
         info_label="View on TVmaze",
+        genres=_genres(show.get("genres")),
+        rating=_score((show.get("rating") or {}).get("average")),
     )
     if media.season is not None and media.episode is not None:
         try:
@@ -313,6 +353,61 @@ def _itunes_movie(media):
         poster=_hires_itunes(art),
         info_url=pick.get("trackViewUrl"),
         info_label="View on Apple TV",
+        genres=_genres(pick.get("primaryGenreName")),
+    )
+
+
+ANILIST_QUERY = """
+query ($s: String) {
+  Page(perPage: 10) {
+    media(search: $s, type: ANIME, sort: SEARCH_MATCH) {
+      title { romaji english }
+      synonyms
+      format
+      startDate { year }
+      genres
+      averageScore
+      coverImage { extraLarge large }
+      siteUrl
+    }
+  }
+}
+"""
+
+
+def _anilist(media):
+    """AniList (anime). No API key. Gives poster, genres and score; no episode names."""
+    data = _post_json("https://graphql.anilist.co", {"query": ANILIST_QUERY, "variables": {"s": media.title}})
+    best = None
+    for r in (((data or {}).get("data") or {}).get("Page") or {}).get("media") or []:
+        if r.get("format") == "MUSIC":
+            continue
+        names = [(r.get("title") or {}).get("english"), (r.get("title") or {}).get("romaji")]
+        names += r.get("synonyms") or []
+        name = next((n for n in names if n and _same_title(media.title, n)), None)
+        if name is None:
+            continue
+        if not _year_ok(media.year, (r.get("startDate") or {}).get("year")):
+            continue
+        cover = r.get("coverImage") or {}
+        art = cover.get("extraLarge") or cover.get("large")
+        if not art:
+            continue
+        score = 0 if (media.year and (r.get("startDate") or {}).get("year") == media.year) else 1
+        if best is None or score < best[0]:
+            best = (score, r, art, name)
+    if best is None:
+        return None
+    _, pick, art, name = best
+    avg = pick.get("averageScore")
+    return replace(
+        media,
+        title=name,
+        poster=art,
+        info_url=pick.get("siteUrl"),
+        info_label="View on AniList",
+        genres=_genres(pick.get("genres")),
+        rating=_score(avg / 10) if avg else None,
     )
 
 
@@ -387,7 +482,8 @@ def _wikipedia_film(media):
 def _lookup(media):
     """(Media, kalin aye hoyanna ona welawa) return karanawa. Welawa None nam hari."""
     if media.is_series:
-        sources = [_tvmaze, lambda m: _imdb(m, True)]
+        imdb = lambda m: _imdb(m, True)       # noqa: E731
+        sources = [_anilist, _tvmaze, imdb] if media.anime else [_tvmaze, _anilist, imdb]
     else:
         sources = [_itunes_movie, lambda m: _imdb(m, False), _wikipedia_film]
 

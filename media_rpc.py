@@ -119,12 +119,14 @@ def build_generic_activity(started_at, player_name, paused=False, end=None, hide
 
 
 def build_activity(media, started_at, end, player_name, paused=False, privacy=False,
-                   hide_button=False):
+                   hide_button=False, show_extra=True):
     """Discord card eka. started_at / end = timer / progress bar (None nam kisima ekak nae)."""
     if privacy or not media.matched:
         return build_generic_activity(started_at, player_name, paused, end, hide_button)
     details = media.display_title()
     state = media.subtitle()
+    if show_extra and media.extra():
+        state = f"{state} \u00b7 {media.extra()}"       # "Movie · Action · ★ 7.4"
     if paused:
         state = f"Paused \u00b7 {state}"
     kwargs = {
@@ -204,7 +206,7 @@ class RpcWorker(threading.Thread):
 
                 # Card eka penna widiya wenas karana settings wenas unoth aye yawanna
                 cfg_now = (bool(cfg.get("hide_button")), bool(cfg.get("hide_when_paused")),
-                           bool(cfg.get("show_progress")))
+                           bool(cfg.get("show_progress")), bool(cfg.get("show_extra")))
                 if cfg_now != last_cfg:
                     last_cfg, last_sent = cfg_now, None
 
@@ -282,7 +284,8 @@ class RpcWorker(threading.Thread):
                             else:
                                 started_at = int((play_since or now) - played)
                         activity = build_activity(media, started_at, end, player_name, paused,
-                                                  privacy, bool(cfg.get("hide_button")))
+                                                  privacy, bool(cfg.get("hide_button")),
+                                                  bool(cfg.get("show_extra")))
                         if (not same_activity(activity, last_sent)
                                 and (last_sent is None or now - last_sent_at >= MIN_UPDATE_SECONDS)):
                             rpc.update(**activity)
@@ -524,7 +527,7 @@ class App:
         elif media is not None:
             self.heading_label.config(text=f"NOW WATCHING · {player_name.upper()}")
             self.title_label.config(text=media.display_title())
-            self.sub_label.config(text=media.subtitle())
+            self.sub_label.config(text="\n".join(t for t in (media.subtitle(), media.extra()) if t))
             self.poster_label.config(
                 text="Poster found" if media.poster else "No poster found (title only)"
             )

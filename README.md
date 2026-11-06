@@ -20,7 +20,8 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 ## Features
 
 - **Automatic detection.** Reads the player's window title and works out whether it's a film or a series episode.
-- **Posters and episode names.** Fetched automatically from TVmaze, iTunes, IMDb and Wikipedia.
+- **Posters and episode names.** Fetched automatically from TVmaze, AniList (anime), iTunes, IMDb and Wikipedia.
+- **Genre and rating.** Shown next to the title when found (can be turned off in Settings).
 - **Smart filename cleanup.** Strips release noise such as `1080p`, `x265`, `BluRay`, `English`, `Sinhala Sub` and site tags like `[CineSubz.com]`.
 - **Safe matching.** A poster is only used when the title (and year) really match your file, so you never get the wrong film's artwork.
 - **System tray.** Closing the window keeps the app running quietly in the tray.

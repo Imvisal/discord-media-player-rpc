@@ -79,6 +79,8 @@ class SettingsWindow:
                             "New versions are downloaded, checked and installed on their own.")
         self._check(page, "hide_when_paused", "Hide my status while the video is paused",
                     "When off, the card says \"Paused\" and the timer stops.")
+        self._check(page, "show_extra", "Show genre and rating",
+                    "Adds e.g. \"Action, Comedy \u00b7 \u2605 7.4\" to the card when it can be found.")
         self._check(page, "hide_button", "Hide the \"Get Media RPC\" button")
         self._check(page, "privacy_mode", "Privacy mode: hide the film name",
                     "Discord only shows \"Watching <player>\". The title and poster are not shown, "
