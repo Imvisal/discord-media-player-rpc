@@ -207,7 +207,7 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 | `system_integration.py` | Start with Windows and single-instance handling |
 | `updater.py` | Online updates: version check, verified download, exe swap |
 | `app_version.py` | App version (set from the release tag when building) |
-| `app_icon.py` | Generates the app icon |
+| `app_icon.py`, `icon_data.py` | The app icon (the logo is embedded in `icon_data.py`) |
 | `site/` | The download website (static HTML, deploys to Vercel with root directory `site`) |
 
 ## Troubleshooting
