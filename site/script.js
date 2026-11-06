@@ -61,7 +61,7 @@
       elVersion.textContent = s.latest.tag;
       elFine.textContent = 'Latest: ' + s.latest.tag + ' · Windows 10/11';
       elLabel.textContent = 'Download ' + s.latest.tag;
-      buttons.forEach(function (b) { if (b) b.href = s.latest.url; });
+      // The buttons keep the short /download link (vercel.json redirects it to the latest exe)
     }
   }
 
