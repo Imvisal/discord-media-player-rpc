@@ -15,6 +15,9 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
   <img src="assets/card-series-2.png" alt="Discord Watching card for the series The Mentalist with episode title and progress bar" width="49%">
   <img src="assets/card-members.png" alt="A server member list entry showing the film that member is watching" width="49%">
 </p>
+<p align="center">
+  <img src="assets/app-window.png" alt="The Media RPC window: now watching The Nice Guys with poster, progress, and the Ko-fi and Discord buttons" width="260">
+</p>
 <p align="center"><sub>Movies with a live progress bar, series with season, episode and episode name, and right in the server member list. Illustrative render of the Discord cards.</sub></p>
 
 ## Features
@@ -32,7 +35,7 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **Pause detection.** Shows "Paused" on your Discord card while the video is paused, and the timer continues from where it stopped when you resume.
 - **Progress bar.** For PotPlayer, VLC, MPC-HC and MPC-BE the card shows a real progress bar that follows seeking (VLC and MPC need their web interface switched on once, see [Progress bar](#progress-bar)).
 - **Films on websites.** Optionally detects films playing in your browser, for the sites you list (see [Films on websites](#films-on-websites)).
-- **Settings.** Hide the status while paused, hide the button, or use privacy mode to keep the film name off Discord (see [Settings](#settings)).
+- **Settings.** Hide the status while paused, show or hide genre and rating, or use privacy mode to keep the film name off Discord (see [Settings](#settings)).
 
 ## Supported players
 
@@ -125,7 +128,7 @@ Open **Settings** in the app window (or the tray menu). Checkboxes apply immedia
 | Setting | What it does |
 | --- | --- |
 | Hide my status while the video is paused | Removes the card from Discord while paused and brings it back when you resume. Off: the card says "Paused". |
-| Hide the "Get Media RPC" button | Removes the button from the card. |
+| Show genre and rating | Adds the genre and IMDb rating (e.g. `Comedy · ★ 7.4`) next to the title when found. |
 | Privacy mode: hide the film name | Discord only shows "Watching <player>". No title, poster or episode, and a local file's name is not looked up online. The progress bar still works. |
 | Detect films on websites in my browser | See [Films on websites](#films-on-websites). |
 | Show a progress bar when the player allows it | See [Progress bar](#progress-bar). |
