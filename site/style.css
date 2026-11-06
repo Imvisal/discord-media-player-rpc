@@ -139,3 +139,6 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
   .js .reveal { opacity: 1; transform: none; }
   * { transition: none !important; }
 }
+
+.support-link { display: inline-flex; align-items: center; gap: 6px; }
+.support-link .cup { display: block; }

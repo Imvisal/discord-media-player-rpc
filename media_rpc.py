@@ -431,8 +431,17 @@ class App:
                             "SMPlayer, mpv and GOM Player. Keep Discord (desktop app) open.\n"
                             "Closing this window keeps the app running in the system tray.",
                  bg=BG, fg=MUTED, font=("Segoe UI", 8), justify="center").pack()
-        support = tk.Label(root, text="\u2665 Support Media RPC on Ko-fi", bg=BG, fg=GREEN,
-                           cursor="hand2", font=("Segoe UI", 9, "underline"))
+        # Support (Ko-fi): a small cup-with-heart icon, no text
+        self.support_icon = None
+        if ImageTk is not None:
+            try:
+                self.support_icon = ImageTk.PhotoImage(app_icon.make_support_icon(34))
+            except Exception:
+                self.support_icon = None
+        if self.support_icon is not None:
+            support = tk.Label(root, image=self.support_icon, bg=BG, cursor="hand2")
+        else:
+            support = tk.Label(root, text="\u2665", bg=BG, fg=RED, cursor="hand2", font=("Segoe UI", 14))
         support.pack(pady=(8, 0))
         support.bind("<Button-1>", lambda _e: webbrowser.open(SUPPORT_URL))
 
@@ -835,8 +844,14 @@ def main():
     if sysint.is_first_run():
         sysint.set_autostart(True)
         sysint.mark_first_run_done()
-        # Desktop shortcut eka (background thread ekak: PowerShell eka tikak welawak yanawa)
-        threading.Thread(target=sysint.create_desktop_shortcut, daemon=True).start()
+
+    # Desktop shortcut: once, for new users and for people who just updated from an older version.
+    # (Background thread: PowerShell takes a moment. If the user deletes the shortcut later, it stays deleted.)
+    if not sysint.get_setting("desktop_shortcut_done"):
+        def make_shortcut():
+            if sysint.create_desktop_shortcut():
+                sysint.set_setting("desktop_shortcut_done", True)
+        threading.Thread(target=make_shortcut, daemon=True).start()
 
     root = tk.Tk()
     App(root, start_hidden="--minimized" in sys.argv)
