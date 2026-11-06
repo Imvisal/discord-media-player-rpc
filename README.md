@@ -228,3 +228,5 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 ## Support
 
 Media RPC is free. If it's useful to you, you can support it on [Ko-fi](https://ko-fi.com/mediarpc).
+
+Questions, feedback or just want to chat? [Join the Discord server](https://discord.gg/jFzf46hEwf).

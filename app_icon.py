@@ -60,29 +60,64 @@ def _font(size):
     return ImageFont.load_default()
 
 
-def make_support_button(index=0, height=46):
-    """The Ko-fi style 'Support me on Ko-fi' button: rounded, cup icon on the left, one line of text.
-    index 0/1/2 = blue / orange / dark. The width follows the text."""
+def _pill_button(text, bg, fg, icon_func, height):
+    """Rounded button: dark tile with an icon on the left, one line of text. The width follows the text."""
     from PIL import ImageDraw
-    bg, fg = SUPPORT_COLORS[index % len(SUPPORT_COLORS)]
     k = 4                                              # draw 4x bigger, then shrink: smooth edges
     H = height * k
     font = _font(int(H * 0.38))
-    tile = int(H * 0.72)                               # dark rounded tile holding the cup icon
+    tile = int(H * 0.72)                               # dark rounded tile holding the icon
     tx, ty = int(H * 0.2), (H - tile) // 2
     text_x = tx + tile + int(H * 0.2)
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
-    box = probe.textbbox((0, 0), SUPPORT_TEXT, font=font)
+    box = probe.textbbox((0, 0), text, font=font)
     W = text_x + (box[2] - box[0]) + int(H * 0.32)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     d.rounded_rectangle((0, 0, W - 1, H - 1), radius=int(H * 0.28), fill=bg + (255,))
     d.rounded_rectangle((tx, ty, tx + tile, ty + tile), radius=int(tile * 0.3), fill=(32, 32, 32, 255))
-    icon = make_support_icon(int(tile * 0.86))
+    icon = icon_func(int(tile * 0.86))
     img.alpha_composite(icon, (tx + (tile - icon.width) // 2, ty + (tile - icon.height) // 2))
-    d.text((text_x - box[0], (H - (box[3] - box[1])) // 2 - box[1]), SUPPORT_TEXT, font=font,
+    d.text((text_x - box[0], (H - (box[3] - box[1])) // 2 - box[1]), text, font=font,
            fill=fg + (255,))
     return img.resize((W // k, H // k), Image.LANCZOS)
+
+
+def make_support_button(index=0, height=46):
+    """The Ko-fi style 'Support me on Ko-fi' button: rounded, cup icon on the left, one line of text.
+    index 0/1/2 = blue / orange / dark. The width follows the text."""
+    bg, fg = SUPPORT_COLORS[index % len(SUPPORT_COLORS)]
+    return _pill_button(SUPPORT_TEXT, bg, fg, make_support_icon, height)
+
+
+def make_discord_icon(size=40):
+    """A simple Discord-style face (drawn here, no image file): the 'join our Discord' button."""
+    from PIL import ImageDraw
+    big = 512
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    white, blurple = (255, 255, 255, 255), (88, 101, 242, 255)
+    d.polygon([(70, 120), (190, 85), (215, 150), (95, 215)], fill=white)        # left ear
+    d.polygon([(442, 120), (322, 85), (297, 150), (417, 215)], fill=white)      # right ear
+    d.rounded_rectangle((55, 120, 457, 380), radius=125, fill=white)            # face
+    d.polygon([(150, 360), (362, 360), (330, 430), (182, 430)], fill=white)     # chin
+    d.ellipse((135, 205, 225, 315), fill=blurple)                               # eyes
+    d.ellipse((287, 205, 377, 315), fill=blurple)
+    d.arc((190, 285, 322, 385), 20, 160, fill=blurple, width=18)                # smile
+    return img.resize((size, size), Image.LANCZOS)
+
+
+DISCORD_COLORS = (                       # (background, text): blurple, darker blurple (mouse over)
+    ((88, 101, 242), (255, 255, 255)),
+    ((71, 82, 196), (255, 255, 255)),
+)
+DISCORD_TEXT = "Join our Discord server"
+
+
+def make_discord_button(index=0, height=46):
+    """'Join our Discord server' button, same look as the Ko-fi one. index 0 = normal, 1 = mouse over."""
+    bg, fg = DISCORD_COLORS[index % len(DISCORD_COLORS)]
+    return _pill_button(DISCORD_TEXT, bg, fg, make_discord_icon, height)
 
 
 if __name__ == "__main__":

@@ -57,6 +57,7 @@ APP_TITLE = "Media RPC"
 PROJECT_URL = "https://discord-media-player-rpc-site.vercel.app/"   # button on the Discord card: the download site
 PROJECT_BUTTON = "Get Media RPC"
 SUPPORT_URL = "https://ko-fi.com/mediarpc"      # "Support" link in the window and tray menu
+DISCORD_URL = "https://discord.gg/jFzf46hEwf"   # "Join our Discord server" button and tray item
 # Poster nathi welawata pennana image eka: Discord Developer Portal > oyage application >
 # Rich Presence > Art Assets walata "default_poster" kiyana nama image ekak upload karanna.
 # Upload karala nathnam Discord eka "?" pennanawa (kalin wage).
@@ -341,7 +342,7 @@ class App:
         self.progress_at = 0.0           # eka kiyawapu welawa (tick eke extrapolate karanna)
 
         root.title(APP_TITLE)
-        root.geometry("380x600")
+        root.geometry("380x660")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -460,6 +461,24 @@ class App:
                                font=("Segoe UI", 10, "underline"))
         support.pack(pady=(10, 0))
         support.bind("<Button-1>", lambda _e: webbrowser.open(SUPPORT_URL))
+
+        # "Join our Discord server" button, under the Ko-fi one (darker blurple on mouse over)
+        self.discord_images = []
+        if ImageTk is not None:
+            try:
+                self.discord_images = [ImageTk.PhotoImage(app_icon.make_discord_button(n))
+                                       for n in range(len(app_icon.DISCORD_COLORS))]
+            except Exception:
+                self.discord_images = []
+        if self.discord_images:
+            discord = tk.Label(root, image=self.discord_images[0], bg=BG, bd=0, cursor="hand2")
+            discord.bind("<Enter>", lambda _e: discord.config(image=self.discord_images[1]))
+            discord.bind("<Leave>", lambda _e: discord.config(image=self.discord_images[0]))
+        else:
+            discord = tk.Label(root, text="Join our Discord server", bg=BG, fg=ACCENT, cursor="hand2",
+                               font=("Segoe UI", 10, "underline"))
+        discord.pack(pady=(8, 12))
+        discord.bind("<Button-1>", lambda _e: webbrowser.open(DISCORD_URL))
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.process_events)
@@ -615,6 +634,8 @@ class App:
                                  lambda icon, item: self.commands.put("settings")),
                 pystray.MenuItem("Support on Ko-fi",
                                  lambda icon, item: webbrowser.open(SUPPORT_URL)),
+                pystray.MenuItem("Join our Discord server",
+                                 lambda icon, item: webbrowser.open(DISCORD_URL)),
                 pystray.MenuItem("Check for updates",
                                  lambda icon, item: self.commands.put("check_update")),
                 pystray.Menu.SEPARATOR,
