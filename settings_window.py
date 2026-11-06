@@ -23,8 +23,9 @@ TABS = (("status", "Status"), ("websites", "Websites"), ("progress", "Progress b
 
 
 class SettingsWindow:
-    def __init__(self, root, settings):
+    def __init__(self, root, settings, app=None):
         self.settings = settings
+        self.app = app           # the main window: owns "Start with Windows" and "Update automatically"
         self._vars = []          # BooleanVars: tkinter drops them if we don't keep a reference
         self._tab_buttons = {}
         self._pages = {}
@@ -70,6 +71,12 @@ class SettingsWindow:
     # -- pages ------------------------------------------------------------------
 
     def _build_status(self, page):
+        if self.app is not None:
+            self._app_check(page, self.app.autostart_var, self.app.on_autostart_checkbox,
+                            "Start with Windows", "Media RPC starts in the system tray when you sign in.")
+            self._app_check(page, self.app.autoupdate_var, self.app.on_autoupdate_checkbox,
+                            "Update automatically",
+                            "New versions are downloaded, checked and installed on their own.")
         self._check(page, "hide_when_paused", "Hide my status while the video is paused",
                     "When off, the card says \"Paused\" and the timer stops.")
         self._check(page, "hide_button", "Hide the \"Get Media RPC\" button")
@@ -153,6 +160,14 @@ class SettingsWindow:
         if note:
             tk.Label(parent, text=note, bg=BG, fg=MUTED, font=(FONT, 8), justify="left",
                      wraplength=WRAP - 20).pack(anchor="w", padx=(24, 0), pady=(0, 8))
+
+    def _app_check(self, parent, var, command, text, note):
+        tk.Checkbutton(parent, text=text, variable=var, command=command,
+                       bg=BG, fg=TEXT, selectcolor=CARD, activebackground=BG,
+                       activeforeground=TEXT, highlightthickness=0, bd=0, cursor="hand2",
+                       font=(FONT, 10)).pack(anchor="w")
+        tk.Label(parent, text=note, bg=BG, fg=MUTED, font=(FONT, 8), justify="left",
+                 wraplength=WRAP - 20).pack(anchor="w", padx=(24, 0), pady=(0, 8))
 
     def _entry(self, parent, label, value, width, show=None):
         tk.Label(parent, text=label, bg=BG, fg=TEXT, font=(FONT, 9)).pack(side="left",

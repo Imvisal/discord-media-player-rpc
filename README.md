@@ -61,7 +61,7 @@ You only need Windows and the Discord desktop app. The Discord Application ID is
 - Closing the window with **X** minimizes Media RPC to the system tray (the `^` arrow next to the clock).
 - **Double-click** the tray icon to reopen the window. **Right-click** for: Show window, Start/Stop, Start with Windows, **Quit**.
 - Use **Quit** from the tray menu to fully close the app.
-- **Start with Windows** turns on by default the first time you run the app. You can switch it off in the window or the tray menu.
+- **Start with Windows** turns on by default the first time you run the app. You can switch it off in **Settings > Status** or the tray menu. **Update automatically** is on by default and is in the same place.
 
 ## Updates
 

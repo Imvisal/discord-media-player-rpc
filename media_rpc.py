@@ -339,7 +339,7 @@ class App:
         self.progress_at = 0.0           # eka kiyawapu welawa (tick eke extrapolate karanna)
 
         root.title(APP_TITLE)
-        root.geometry("380x620")
+        root.geometry("380x560")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -402,18 +402,9 @@ class App:
                   pady=8).pack(side="left")
 
         self.autostart_var = tk.BooleanVar(value=sysint.is_autostart_enabled())
-        tk.Checkbutton(root, text="Start with Windows", variable=self.autostart_var,
-                       command=self.on_autostart_checkbox, bg=BG, fg=TEXT,
-                       selectcolor=CARD, activebackground=BG, activeforeground=TEXT,
-                       highlightthickness=0, bd=0, cursor="hand2",
-                       font=("Segoe UI", 10)).pack(pady=(2, 2))
+        # (the "Start with Windows" and "Update automatically" checkboxes are in Settings)
 
         self.autoupdate_var = tk.BooleanVar(value=bool(sysint.get_setting("auto_update_check", True)))
-        tk.Checkbutton(root, text="Update automatically", variable=self.autoupdate_var,
-                       command=self.on_autoupdate_checkbox, bg=BG, fg=TEXT,
-                       selectcolor=CARD, activebackground=BG, activeforeground=TEXT,
-                       highlightthickness=0, bd=0, cursor="hand2",
-                       font=("Segoe UI", 10)).pack(pady=(0, 4))
 
         # version + update (aluth version ekak thiyenakota button eka pennanawa)
         self.update_box = tk.Frame(root, bg=BG)
@@ -620,7 +611,7 @@ class App:
         if self.settings_win is not None and self.settings_win.alive():
             self.settings_win.focus()
             return
-        self.settings_win = settings_window.SettingsWindow(self.root, self.settings)
+        self.settings_win = settings_window.SettingsWindow(self.root, self.settings, self)
 
     def on_autostart_checkbox(self):
         wanted = self.autostart_var.get()
