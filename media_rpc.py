@@ -339,7 +339,7 @@ class App:
         self.progress_at = 0.0           # eka kiyawapu welawa (tick eke extrapolate karanna)
 
         root.title(APP_TITLE)
-        root.geometry("380x600")
+        root.geometry("380x640")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -435,14 +435,14 @@ class App:
         self.support_icon = None
         if ImageTk is not None:
             try:
-                self.support_icon = ImageTk.PhotoImage(app_icon.make_support_icon(22))
+                self.support_icon = ImageTk.PhotoImage(app_icon.make_support_icon(30))
             except Exception:
                 self.support_icon = None
-        support = tk.Button(root, text="Support me on Ko-fi", image=self.support_icon or "",
-                            compound="left", command=lambda: webbrowser.open(SUPPORT_URL),
+        support = tk.Button(root, text="Support Media RPC on Ko-fi", image=self.support_icon or "",
+                            compound="top", command=lambda: webbrowser.open(SUPPORT_URL),
                             bg="#ff5e5b", fg="white", activebackground="#e8504d",
                             activeforeground="white", relief="flat", bd=0, cursor="hand2",
-                            font=("Segoe UI", 10, "bold"), padx=14, pady=5)
+                            font=("Segoe UI", 9, "bold"), padx=18, pady=6)
         support.pack(pady=(8, 0))
         # Each time the mouse comes over the button it switches to the next colour: blue, orange, dark
         self.support_colors = (("#72a4f2", "#1b1b1b"), ("#ff6433", "#ffffff"), ("#202020", "#ffffff"))
