@@ -142,3 +142,5 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 
 .support-link { display: inline-flex; align-items: center; gap: 6px; }
 .support-link .cup { display: block; }
+.btn-kofi { background: #ff5e5b; color: #fff; gap: 8px; }
+.btn-kofi:hover { background: #e8504d; }

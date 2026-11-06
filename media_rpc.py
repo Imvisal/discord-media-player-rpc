@@ -409,7 +409,7 @@ class App:
                        font=("Segoe UI", 10)).pack(pady=(2, 2))
 
         self.autoupdate_var = tk.BooleanVar(value=bool(sysint.get_setting("auto_update_check", True)))
-        tk.Checkbutton(root, text="Check for updates automatically", variable=self.autoupdate_var,
+        tk.Checkbutton(root, text="Update automatically", variable=self.autoupdate_var,
                        command=self.on_autoupdate_checkbox, bg=BG, fg=TEXT,
                        selectcolor=CARD, activebackground=BG, activeforeground=TEXT,
                        highlightthickness=0, bd=0, cursor="hand2",
@@ -431,19 +431,19 @@ class App:
                             "SMPlayer, mpv and GOM Player. Keep Discord (desktop app) open.\n"
                             "Closing this window keeps the app running in the system tray.",
                  bg=BG, fg=MUTED, font=("Segoe UI", 8), justify="center").pack()
-        # Support (Ko-fi): a small cup-with-heart icon, no text
+        # Support button (Ko-fi style: orange, cup-with-heart icon)
         self.support_icon = None
         if ImageTk is not None:
             try:
-                self.support_icon = ImageTk.PhotoImage(app_icon.make_support_icon(34))
+                self.support_icon = ImageTk.PhotoImage(app_icon.make_support_icon(22))
             except Exception:
                 self.support_icon = None
-        if self.support_icon is not None:
-            support = tk.Label(root, image=self.support_icon, bg=BG, cursor="hand2")
-        else:
-            support = tk.Label(root, text="\u2665", bg=BG, fg=RED, cursor="hand2", font=("Segoe UI", 14))
+        support = tk.Button(root, text="Support me on Ko-fi", image=self.support_icon or "",
+                            compound="left", command=lambda: webbrowser.open(SUPPORT_URL),
+                            bg="#ff5e5b", fg="white", activebackground="#e8504d",
+                            activeforeground="white", relief="flat", bd=0, cursor="hand2",
+                            font=("Segoe UI", 10, "bold"), padx=14, pady=5)
         support.pack(pady=(8, 0))
-        support.bind("<Button-1>", lambda _e: webbrowser.open(SUPPORT_URL))
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.process_events)
@@ -656,6 +656,16 @@ class App:
         label = "Update and restart" if updater.can_self_update() else "Open download page"
         self.update_button.config(text=label, state="normal")
         self.update_button.pack(pady=(6, 0))
+        # Automatic check + "update automatically" on: download, verify and install without a click
+        if not manual and updater.can_self_update() and self.autoupdate_var.get():
+            if self.tray is not None and self.notified_version != info.version:
+                self.notified_version = info.version
+                try:
+                    self.tray.notify(f"Updating to version {info.version}...", f"{APP_TITLE} update")
+                except Exception:
+                    pass
+            self.install_update()
+            return
         # Auto check ekakin aluth version ekak hambunoth tray notification ekak (eka version ekata ekakin witharai)
         if not manual and self.tray is not None and self.notified_version != info.version:
             self.notified_version = info.version

@@ -27,7 +27,7 @@ Windows only. No Python, no API keys, no setup: download the exe and run it.
 - **Desktop shortcut.** The first time you open the exe, it adds a "Media RPC" shortcut to your desktop.
 - **Start with Windows.** Optional auto-start, minimized to the tray.
 - **One instance only.** Opening it twice just tells you it's already running.
-- **Online updates.** Shows a tray notification when a new version is out and updates itself in one click.
+- **Online updates.** Shows a tray notification when a new version is out and updates itself automatically.
 - **Pause detection.** Shows "Paused" on your Discord card while the video is paused, and the timer continues from where it stopped when you resume.
 - **Progress bar.** For PotPlayer, VLC, MPC-HC and MPC-BE the card shows a real progress bar that follows seeking (VLC and MPC need their web interface switched on once, see [Progress bar](#progress-bar)).
 - **Films on websites.** Optionally detects films playing in your browser, for the sites you list (see [Films on websites](#films-on-websites)).
@@ -65,7 +65,7 @@ You only need Windows and the Discord desktop app. The Discord Application ID is
 
 ## Updates
 
-Media RPC checks GitHub Releases shortly after it starts and then every 6 hours. When a newer version exists, the window shows **Update available** with an **Update and restart** button. Nothing is installed until you click it.
+Media RPC checks GitHub Releases shortly after it starts and then every 6 hours. When a newer version exists, it is downloaded, checked against its SHA-256 checksum and installed automatically (the app restarts for a moment). Untick **Update automatically** in the window to get an **Update and restart** button instead and install only when you click it.
 
 What happens when you click:
 
@@ -76,7 +76,7 @@ What happens when you click:
 Good to know:
 
 - The check is a single request to the GitHub API. It sends no personal data (GitHub sees your IP address and the app version, like any download). Only HTTPS connections to GitHub are allowed.
-- Turn automatic checks off with **Check for updates automatically** in the window. You can still use **Check for updates** in the tray menu.
+- Turn automatic updates off with **Update automatically** in the window. You can still use **Check for updates** in the tray menu.
 - If the exe sits in a folder that needs administrator rights (like `C:\Program Files`), or you run from source, the button opens the download page instead.
 - The first release that contains the updater must be installed manually. After that, updates are one click.
 
