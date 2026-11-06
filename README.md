@@ -53,7 +53,7 @@ You only need Windows and the Discord desktop app. The Discord Application ID is
 ### The app window
 
 - **Status**: Connected, or "Discord not found, retrying...".
-- **Now watching**: the player, the detected title, whether a poster was found, and elapsed time.
+- **Now watching**: the player, the detected title, the poster, and elapsed time.
 - **Start / Stop**: switch the presence off and on.
 
 ### System tray

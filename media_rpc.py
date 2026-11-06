@@ -71,6 +71,8 @@ RETRY_SECONDS = 5     # Discord connect wenne nathnam aye try karana gaman
 POSTER_RETRY_SECONDS = 30   # poster nathnam aye hoyala balana gaman (seconds)
 UPDATE_CHECK_SECONDS = 6 * 3600   # aluth version ekak thiyenawada balana gaman
 UPDATE_FIRST_CHECK_MS = 5000      # app eka open wela tikak passe palaweni check eka
+POSTER_W, POSTER_H = 96, 144      # poster thumbnail in the "Now watching" card (2:3)
+TEXT_WRAP = 190                   # wrap width of the text next to the poster
 
 UPDATE_PARAMS = set(inspect.signature(Presence.update).parameters)
 
@@ -339,7 +341,7 @@ class App:
         self.progress_at = 0.0           # eka kiyawapu welawa (tick eke extrapolate karanna)
 
         root.title(APP_TITLE)
-        root.geometry("380x560")
+        root.geometry("380x600")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -370,22 +372,35 @@ class App:
         self.heading_label = tk.Label(card, text="NOW WATCHING", bg=CARD, fg=MUTED,
                                       font=("Segoe UI", 8, "bold"), anchor="w")
         self.heading_label.pack(fill="x")
-        self.title_label = tk.Label(card, text="Nothing playing", bg=CARD, fg=TEXT,
+
+        # poster (left) + text (right), like the Discord card
+        body = tk.Frame(card, bg=CARD)
+        body.pack(fill="x", pady=(8, 0))
+        self.poster_canvas = tk.Canvas(body, width=POSTER_W, height=POSTER_H, bg=CARD,
+                                       highlightthickness=0, bd=0)
+        self.poster_photo = None         # keep a reference or Tk drops the image
+        self.poster_url = None           # poster currently shown / being downloaded
+        self.poster_canvas_shown = False
+        text_col = tk.Frame(body, bg=CARD)
+        text_col.pack(side="right", fill="both", expand=True)
+        self.text_col = text_col
+        self.title_label = tk.Label(text_col, text="Nothing playing", bg=CARD, fg=TEXT,
                                     font=("Segoe UI", 12, "bold"), anchor="w",
-                                    justify="left", wraplength=310)
-        self.title_label.pack(fill="x", pady=(6, 2))
-        self.sub_label = tk.Label(card, text="", bg=CARD, fg=TEXT,
+                                    justify="left", wraplength=TEXT_WRAP)
+        self.title_label.pack(fill="x", pady=(0, 2))
+        self.sub_label = tk.Label(text_col, text="", bg=CARD, fg=TEXT,
                                   font=("Segoe UI", 10), anchor="w",
-                                  justify="left", wraplength=310)
+                                  justify="left", wraplength=TEXT_WRAP)
         self.sub_label.pack(fill="x")
-        self.poster_label = tk.Label(card, text="", bg=CARD, fg=MUTED,
-                                     font=("Segoe UI", 8), anchor="w")
+        self.poster_label = tk.Label(text_col, text="", bg=CARD, fg=MUTED,
+                                     font=("Segoe UI", 8), anchor="w", justify="left",
+                                     wraplength=TEXT_WRAP)
         self.poster_label.pack(fill="x", pady=(4, 0))
-        self.elapsed_label = tk.Label(card, text="", bg=CARD, fg=MUTED,
+        self.elapsed_label = tk.Label(text_col, text="", bg=CARD, fg=MUTED,
                                       font=("Segoe UI", 9), anchor="w")
         self.elapsed_label.pack(fill="x", pady=(2, 0))
-        self.hint_label = tk.Label(card, text="", bg=CARD, fg=MUTED, font=("Segoe UI", 8),
-                                   anchor="w", justify="left", wraplength=310)
+        self.hint_label = tk.Label(text_col, text="", bg=CARD, fg=MUTED, font=("Segoe UI", 8),
+                                   anchor="w", justify="left", wraplength=TEXT_WRAP)
         self.hint_label.pack(fill="x", pady=(2, 0))
 
         # start / stop + settings buttons
@@ -485,6 +500,7 @@ class App:
             self.poster_label.config(
                 text="Privacy mode: title hidden on Discord" if privacy
                 else "Not a movie / TV series (title hidden on Discord)")
+            self.set_poster(None)
             self.watch_started = time.time()
         elif media is not None:
             self.heading_label.config(text=f"NOW WATCHING · {player_name.upper()}")
@@ -493,6 +509,7 @@ class App:
             self.poster_label.config(
                 text="Poster found" if media.poster else "No poster found (title only)"
             )
+            self.set_poster(media.poster)
             self.watch_started = time.time()
         else:
             self.heading_label.config(text="NOW WATCHING")
@@ -500,7 +517,52 @@ class App:
             self.sub_label.config(text="")
             self.poster_label.config(text="")
             self.elapsed_label.config(text="")
+            self.set_poster(None)
             self.watch_started = None
+
+    # -- poster thumbnail in the card ------------------------------------------
+
+    def set_poster(self, url):
+        """Show the poster next to the title. The download runs in a thread (never blocks the UI)."""
+        if ImageTk is None:
+            return
+        if url == self.poster_url:
+            return                                   # same poster already shown / loading
+        self.poster_url = url
+        self.poster_photo = None
+        self.poster_canvas.delete("all")
+        if not url:
+            if self.poster_canvas_shown:
+                self.poster_canvas.pack_forget()
+                self.poster_canvas_shown = False
+            return
+        if not self.poster_canvas_shown:
+            self.poster_canvas.pack(side="left", padx=(0, 12), anchor="n")
+            self.poster_canvas_shown = True
+        self.poster_canvas.create_rectangle(0, 0, POSTER_W, POSTER_H, fill=BG, outline="")
+
+        def work():
+            data = media_info.fetch_poster_bytes(url)
+            self.ui_queue.put(("poster", (url, data)))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def show_poster_image(self, url, data):
+        if url != self.poster_url or not data:
+            return                                   # a newer film is playing / download failed
+        try:
+            import io
+            from PIL import Image
+            img = Image.open(io.BytesIO(data)).convert("RGB")
+            scale = min(POSTER_W / img.width, POSTER_H / img.height)
+            img = img.resize((max(1, round(img.width * scale)), max(1, round(img.height * scale))),
+                             Image.LANCZOS)
+            self.poster_photo = ImageTk.PhotoImage(img)
+        except Exception:
+            return
+        self.poster_canvas.delete("all")
+        self.poster_canvas.create_rectangle(0, 0, POSTER_W, POSTER_H, fill=BG, outline="")
+        self.poster_canvas.create_image(POSTER_W // 2, POSTER_H // 2, image=self.poster_photo)
 
     def running(self):
         return self.worker is not None
@@ -733,6 +795,8 @@ class App:
                             self.update_label.config(text=self.version_text(), fg=MUTED)
                         else:
                             self.update_label.config(text=f"{self.version_text()} (up to date)", fg=GREEN)
+                elif kind == "poster":
+                    self.show_poster_image(*payload)
                 elif kind == "update_progress":
                     self.update_button.config(text=f"Downloading... {payload}%")
                 elif kind == "update_ready":

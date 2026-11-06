@@ -239,6 +239,17 @@ def _get_json(url):
         return json.load(resp)
 
 
+def _hires_itunes(url):
+    """iTunes artwork: 100x100 thumbnail -> big version (Discord shows it sharp on HiDPI screens)."""
+    return re.sub(r"/\d+x\d+(?:bb|sr)?\.(jpg|png|webp)$", r"/1000x1000bb.\1", url)
+
+
+def _hires_imdb(url):
+    """IMDb suggestion images can be tiny crops (._V1_UX32_CR0,0,32,44_.jpg). Ask Amazon's image
+    server for a clean 800px wide poster instead."""
+    return re.sub(r"\._V1_[^/]*\.(jpg|png)$", r"._V1_SX800.\1", url)
+
+
 def _tvmaze(media):
     results = _get_json("https://api.tvmaze.com/search/shows?q=" + urllib.parse.quote(media.title))
     best = None
@@ -299,7 +310,7 @@ def _itunes_movie(media):
     return replace(
         media,
         title=pick.get("trackName") or media.title,
-        poster=art.replace("100x100bb", "600x600bb"),
+        poster=_hires_itunes(art),
         info_url=pick.get("trackViewUrl"),
         info_label="View on Apple TV",
     )
@@ -334,7 +345,7 @@ def _imdb(media, series):
     return replace(
         media,
         title=pick.get("l") or media.title,
-        poster=img,
+        poster=_hires_imdb(img),
         info_url=f"https://www.imdb.com/title/{pick.get('id')}/" if pick.get("id") else None,
         info_label="View on IMDb",
     )
@@ -344,7 +355,7 @@ def _wikipedia_film(media):
     term = f"{media.title} {media.year} film" if media.year else f"{media.title} film"
     data = _get_json(
         "https://en.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=6"
-        "&prop=pageimages&piprop=thumbnail&pithumbsize=600&gsrsearch=" + urllib.parse.quote(term)
+        "&prop=pageimages&piprop=thumbnail&pithumbsize=1000&gsrsearch=" + urllib.parse.quote(term)
     )
     pages = sorted(((data.get("query") or {}).get("pages") or {}).values(),
                    key=lambda p: p.get("index", 99))
@@ -402,6 +413,28 @@ def _lookup(media):
 
 
 _cache = {}
+_poster_cache = {}
+MAX_POSTER_BYTES = 8 * 1024 * 1024
+
+
+def fetch_poster_bytes(url):
+    """Poster image eka download karanawa (app window eke pennanna). Fail unoth None. Cache wenawa."""
+    if not url:
+        return None
+    if url in _poster_cache:
+        return _poster_cache[url]
+    try:
+        req = urllib.request.Request(url, headers=USER_AGENT)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = resp.read(MAX_POSTER_BYTES + 1)
+        if len(data) > MAX_POSTER_BYTES:
+            data = None
+    except Exception:
+        return None            # cache karanne nae: aye try karanna puluwan
+    if len(_poster_cache) > 20:
+        _poster_cache.clear()
+    _poster_cache[url] = data
+    return data
 
 
 def resolve(raw):
