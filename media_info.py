@@ -479,6 +479,28 @@ def _wikipedia_film(media):
     return None
 
 
+def _enrich(found):
+    """Add IMDb rating / genres (Cinemeta, no API key) when the first source didn't have them.
+    Best effort: any failure just leaves the media as it was."""
+    if found.rating and found.genres:
+        return found
+    try:
+        kind = "series" if found.is_series else "movie"
+        data = _get_json(f"https://v3-cinemeta.strem.io/catalog/{kind}/top/search="
+                         + urllib.parse.quote(found.title) + ".json")
+        for m in (data or {}).get("metas") or []:
+            if not _same_title(found.title, m.get("name")):
+                continue
+            if not _year_ok(found.year, _year_of(m.get("releaseInfo") or m.get("year"))):
+                continue
+            return replace(found,
+                           rating=found.rating or _score(m.get("imdbRating")),
+                           genres=found.genres or _genres(m.get("genres")))
+    except Exception:
+        pass
+    return found
+
+
 def _lookup(media):
     """(Media, kalin aye hoyanna ona welawa) return karanawa. Welawa None nam hari."""
     if media.is_series:
@@ -501,7 +523,7 @@ def _lookup(media):
         if found.poster:
             if best is not None:                 # TVmaze: episode nama thiyenawa, poster nae
                 found = replace(best, poster=found.poster)
-            return found, None
+            return _enrich(found), None
         best = found
 
     wait = RETRY_AFTER_ERROR if failed else RETRY_AFTER_NO_MATCH
