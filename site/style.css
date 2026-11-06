@@ -142,5 +142,8 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 
 .support-link { display: inline-flex; align-items: center; gap: 6px; }
 .support-link .cup { display: block; }
-.btn-kofi { background: #ff5e5b; color: #fff; gap: 8px; }
-.btn-kofi:hover { background: #e8504d; }
+.btn-kofi { background: #72a4f2; color: #1b1b1b; gap: 8px; transition: background .25s, color .25s, transform .2s; }
+.btn-kofi svg { stroke: currentColor; }
+.btn-kofi svg path:last-child { fill: currentColor; }
+.btn-kofi[data-c="1"] { background: #ff6433; color: #fff; }
+.btn-kofi[data-c="2"] { background: #202020; color: #fff; border-color: #3a3a3a; }

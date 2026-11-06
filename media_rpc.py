@@ -444,6 +444,18 @@ class App:
                             activeforeground="white", relief="flat", bd=0, cursor="hand2",
                             font=("Segoe UI", 10, "bold"), padx=14, pady=5)
         support.pack(pady=(8, 0))
+        # Each time the mouse comes over the button it switches to the next colour: blue, orange, dark
+        self.support_colors = (("#72a4f2", "#1b1b1b"), ("#ff6433", "#ffffff"), ("#202020", "#ffffff"))
+        self.support_index = 0
+
+        def next_support_color(_event=None):
+            self.support_index = (self.support_index + 1) % len(self.support_colors)
+            bg, fg = self.support_colors[self.support_index]
+            support.config(bg=bg, fg=fg, activebackground=bg, activeforeground=fg)
+
+        bg0, fg0 = self.support_colors[0]
+        support.config(bg=bg0, fg=fg0, activebackground=bg0, activeforeground=fg0)
+        support.bind("<Enter>", next_support_color)
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.process_events)

@@ -101,3 +101,17 @@
   }, { threshold: 0.15 });
   items.forEach(function (el) { io.observe(el); });
 })();
+
+
+/* Ko-fi buttons: every time the mouse comes over one it switches to the next colour (blue, orange, dark) */
+(function () {
+  var buttons = document.querySelectorAll('.btn-kofi');
+  var index = 0;
+  function apply() {
+    buttons.forEach(function (b) { b.setAttribute('data-c', String(index)); });
+  }
+  buttons.forEach(function (b) {
+    b.addEventListener('mouseenter', function () { index = (index + 1) % 3; apply(); });
+  });
+  apply();
+})();
