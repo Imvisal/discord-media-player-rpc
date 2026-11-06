@@ -1,6 +1,11 @@
 {
   "redirects": [
     {
+      "source": "/support",
+      "destination": "https://ko-fi.com/mediarpc",
+      "permanent": false
+    },
+    {
       "source": "/download",
       "destination": "https://github.com/Imvisal/discord-media-player-rpc/releases/latest/download/MediaRPC.exe",
       "permanent": false

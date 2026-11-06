@@ -56,6 +56,7 @@ APP_TITLE = "Media RPC"
 # Discord card eke "Get Media RPC" button eka yana link eka (Steam eke "Get on Steam" wage).
 PROJECT_URL = "https://discord-media-player-rpc-site.vercel.app/"   # button on the Discord card: the download site
 PROJECT_BUTTON = "Get Media RPC"
+SUPPORT_URL = "https://ko-fi.com/mediarpc"      # "Support" link in the window and tray menu
 # Poster nathi welawata pennana image eka: Discord Developer Portal > oyage application >
 # Rich Presence > Art Assets walata "default_poster" kiyana nama image ekak upload karanna.
 # Upload karala nathnam Discord eka "?" pennanawa (kalin wage).
@@ -338,7 +339,7 @@ class App:
         self.progress_at = 0.0           # eka kiyawapu welawa (tick eke extrapolate karanna)
 
         root.title(APP_TITLE)
-        root.geometry("380x570")
+        root.geometry("380x600")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -430,6 +431,10 @@ class App:
                             "SMPlayer, mpv and GOM Player. Keep Discord (desktop app) open.\n"
                             "Closing this window keeps the app running in the system tray.",
                  bg=BG, fg=MUTED, font=("Segoe UI", 8), justify="center").pack()
+        support = tk.Label(root, text="\u2665 Support Media RPC on Ko-fi", bg=BG, fg=GREEN,
+                           cursor="hand2", font=("Segoe UI", 9, "underline"))
+        support.pack(pady=(8, 0))
+        support.bind("<Button-1>", lambda _e: webbrowser.open(SUPPORT_URL))
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.process_events)
@@ -536,6 +541,8 @@ class App:
                                  checked=lambda item: sysint.is_autostart_enabled()),
                 pystray.MenuItem("Settings",
                                  lambda icon, item: self.commands.put("settings")),
+                pystray.MenuItem("Support on Ko-fi",
+                                 lambda icon, item: webbrowser.open(SUPPORT_URL)),
                 pystray.MenuItem("Check for updates",
                                  lambda icon, item: self.commands.put("check_update")),
                 pystray.Menu.SEPARATOR,

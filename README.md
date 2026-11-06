@@ -224,3 +224,7 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 - The progress bar needs a player that reports its position (see [Progress bar](#progress-bar)); the others get an elapsed timer.
 - Websites are detected by tab title only, so only sites that put the film name there work, and there's no progress bar for them (see [Films on websites](#films-on-websites)).
 - Discord shows your PC's status whatever device you're using. If you leave a player open (even paused) and go play on your phone, the card stays visible. Use **Hide my status while the video is paused**, or close the player.
+
+## Support
+
+Media RPC is free. If it's useful to you, you can support it on [Ko-fi](https://ko-fi.com/mediarpc).
