@@ -149,9 +149,17 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 .btn-kofi[data-c="1"] { background: #ff6433; color: #fff; }
 .btn-kofi[data-c="2"] { background: #202020; color: #fff; border-color: #3a3a3a; }
 
-/* app window screenshot (spans the gallery) + Discord button */
-.gal-app { grid-column: 1 / -1; text-align: center; }
+/* app window screenshot (left column of the gallery) + Discord button */
+.gallery { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 36px 40px; align-items: center; }
+.gal-app { grid-column: 1; grid-row: 1 / span 4; align-self: start; position: sticky; top: 24px; text-align: center; }
+.gallery .gal-item:not(.gal-app) { grid-column: 2; }
 .gal-app img { width: auto; max-width: min(300px, 100%); margin: 0 auto; mix-blend-mode: normal; border-radius: 10px; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); }
 .btn-discord { background: #5865f2; color: #fff; gap: 8px; border-radius: 12px; padding-left: 12px; transition: background .2s, transform .2s; }
 .btn-discord:hover { background: #4752c4; }
 .btn-discord svg { width: 28px; height: 28px; padding: 4px; box-sizing: border-box; background: #202020; border-radius: 9px; }
+
+@media (max-width: 860px) {
+  .gallery { grid-template-columns: 1fr; gap: 36px 28px; }
+  .gal-app { grid-column: 1; grid-row: auto; position: static; }
+  .gallery .gal-item:not(.gal-app) { grid-column: 1; }
+}
