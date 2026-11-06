@@ -42,5 +42,48 @@ def make_support_icon(size=40):
     return img.resize((size, size), Image.LANCZOS)
 
 
+SUPPORT_COLORS = (                       # (background, text): blue, orange, dark
+    ((114, 164, 242), (27, 27, 27)),
+    ((255, 100, 51), (255, 255, 255)),
+    ((32, 32, 32), (255, 255, 255)),
+)
+SUPPORT_TEXT = "Support me on Ko-fi"
+
+
+def _font(size):
+    from PIL import ImageFont
+    for name in ("segoeuib.ttf", "seguisb.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"):
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def make_support_button(index=0, height=46):
+    """The Ko-fi style 'Support me on Ko-fi' button: rounded, cup icon on the left, one line of text.
+    index 0/1/2 = blue / orange / dark. The width follows the text."""
+    from PIL import ImageDraw
+    bg, fg = SUPPORT_COLORS[index % len(SUPPORT_COLORS)]
+    k = 4                                              # draw 4x bigger, then shrink: smooth edges
+    H = height * k
+    font = _font(int(H * 0.38))
+    tile = int(H * 0.72)                               # dark rounded tile holding the cup icon
+    tx, ty = int(H * 0.2), (H - tile) // 2
+    text_x = tx + tile + int(H * 0.2)
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    box = probe.textbbox((0, 0), SUPPORT_TEXT, font=font)
+    W = text_x + (box[2] - box[0]) + int(H * 0.32)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((0, 0, W - 1, H - 1), radius=int(H * 0.28), fill=bg + (255,))
+    d.rounded_rectangle((tx, ty, tx + tile, ty + tile), radius=int(tile * 0.3), fill=(32, 32, 32, 255))
+    icon = make_support_icon(int(tile * 0.86))
+    img.alpha_composite(icon, (tx + (tile - icon.width) // 2, ty + (tile - icon.height) // 2))
+    d.text((text_x - box[0], (H - (box[3] - box[1])) // 2 - box[1]), SUPPORT_TEXT, font=font,
+           fill=fg + (255,))
+    return img.resize((W // k, H // k), Image.LANCZOS)
+
+
 if __name__ == "__main__":
     make_icon_image(256).save("icon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])

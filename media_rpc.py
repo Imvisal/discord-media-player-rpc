@@ -339,7 +339,7 @@ class App:
         self.progress_at = 0.0           # eka kiyawapu welawa (tick eke extrapolate karanna)
 
         root.title(APP_TITLE)
-        root.geometry("380x640")
+        root.geometry("380x620")
         root.resizable(False, False)
         root.configure(bg=BG)
         if ImageTk is not None:
@@ -431,31 +431,29 @@ class App:
                             "SMPlayer, mpv and GOM Player. Keep Discord (desktop app) open.\n"
                             "Closing this window keeps the app running in the system tray.",
                  bg=BG, fg=MUTED, font=("Segoe UI", 8), justify="center").pack()
-        # Support button (Ko-fi style: orange, cup-with-heart icon)
-        self.support_icon = None
+        # Support button (Ko-fi style): rounded "Support me on Ko-fi" with a cup icon. Every time the
+        # mouse comes over it, it switches to the next colour: blue, orange, dark.
+        self.support_images = []
         if ImageTk is not None:
             try:
-                self.support_icon = ImageTk.PhotoImage(app_icon.make_support_icon(30))
+                self.support_images = [ImageTk.PhotoImage(app_icon.make_support_button(n))
+                                       for n in range(len(app_icon.SUPPORT_COLORS))]
             except Exception:
-                self.support_icon = None
-        support = tk.Button(root, text="Support Media RPC on Ko-fi", image=self.support_icon or "",
-                            compound="top", command=lambda: webbrowser.open(SUPPORT_URL),
-                            bg="#ff5e5b", fg="white", activebackground="#e8504d",
-                            activeforeground="white", relief="flat", bd=0, cursor="hand2",
-                            font=("Segoe UI", 9, "bold"), padx=18, pady=6)
-        support.pack(pady=(8, 0))
-        # Each time the mouse comes over the button it switches to the next colour: blue, orange, dark
-        self.support_colors = (("#72a4f2", "#1b1b1b"), ("#ff6433", "#ffffff"), ("#202020", "#ffffff"))
+                self.support_images = []
         self.support_index = 0
+        if self.support_images:
+            support = tk.Label(root, image=self.support_images[0], bg=BG, bd=0, cursor="hand2")
 
-        def next_support_color(_event=None):
-            self.support_index = (self.support_index + 1) % len(self.support_colors)
-            bg, fg = self.support_colors[self.support_index]
-            support.config(bg=bg, fg=fg, activebackground=bg, activeforeground=fg)
+            def next_support_color(_event=None):
+                self.support_index = (self.support_index + 1) % len(self.support_images)
+                support.config(image=self.support_images[self.support_index])
 
-        bg0, fg0 = self.support_colors[0]
-        support.config(bg=bg0, fg=fg0, activebackground=bg0, activeforeground=fg0)
-        support.bind("<Enter>", next_support_color)
+            support.bind("<Enter>", next_support_color)
+        else:
+            support = tk.Label(root, text="Support me on Ko-fi", bg=BG, fg=GREEN, cursor="hand2",
+                               font=("Segoe UI", 10, "underline"))
+        support.pack(pady=(10, 0))
+        support.bind("<Button-1>", lambda _e: webbrowser.open(SUPPORT_URL))
 
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.after(200, self.process_events)

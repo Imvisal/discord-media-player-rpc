@@ -143,7 +143,8 @@ h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 
 .support-link { display: inline-flex; align-items: center; gap: 6px; }
 .support-link .cup { display: block; }
 .btn-kofi { background: #72a4f2; color: #1b1b1b; gap: 8px; transition: background .25s, color .25s, transform .2s; }
-.btn-kofi svg { stroke: currentColor; }
-.btn-kofi svg path:last-child { fill: currentColor; }
+.btn-kofi { border-radius: 12px; padding-left: 12px; }
+.btn-kofi svg { width: 28px; height: 28px; padding: 4px; box-sizing: border-box; background: #202020; border-radius: 9px; stroke: #fff; }
+.btn-kofi svg path:last-child { fill: #ff5e5b; stroke: #ff5e5b; }
 .btn-kofi[data-c="1"] { background: #ff6433; color: #fff; }
 .btn-kofi[data-c="2"] { background: #202020; color: #fff; border-color: #3a3a3a; }
