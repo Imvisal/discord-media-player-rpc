@@ -1,7 +1,14 @@
 // Tiny Upstash Redis REST client (no dependencies). Connect "Upstash for Redis" to the Vercel project
 // (Storage tab); it adds KV_REST_API_URL / KV_REST_API_TOKEN (or UPSTASH_REDIS_REST_URL / _TOKEN).
-const URL_ = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Finds the database variables whatever prefix was chosen when connecting it in Vercel
+// (KV_REST_API_URL, STORAGE_REST_API_URL, UPSTASH_REDIS_REST_URL, ...). The read-only token is skipped.
+function find(suffixes) {
+  const env = process.env;
+  const key = Object.keys(env).find((k) => !/READ_ONLY/.test(k) && suffixes.some((s) => k.endsWith(s)) && env[k]);
+  return key ? env[key] : undefined;
+}
+const URL_ = find(['_REST_API_URL', 'REDIS_REST_URL']);
+const TOKEN = find(['_REST_API_TOKEN', 'REDIS_REST_TOKEN']);
 
 async function pipeline(commands) {
   if (!URL_ || !TOKEN) throw new Error('redis not configured');

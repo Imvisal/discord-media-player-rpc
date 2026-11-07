@@ -243,7 +243,7 @@ So the author can see how many installs are in use, Media RPC sends a tiny ping 
 
 `/admin` on the website shows installs in use now / last 24 h / 7 days / 30 days, new installs per day, app versions and the latest installs. It needs a one-time setup on Vercel:
 
-1. Vercel project > **Storage** > create / connect **Upstash for Redis** (free). This adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically.
+1. Vercel project > **Storage** > create / connect **Upstash for Redis** (free). This adds the database variables (any prefix works, e.g. `KV_REST_API_URL` and `KV_REST_API_TOKEN`).
 2. Project > **Settings > Environment Variables**: add `ADMIN_PASSWORD` with a long password.
 3. **Redeploy**, then open `https://<your-site>/admin` and sign in.
 
