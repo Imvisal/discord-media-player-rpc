@@ -77,6 +77,9 @@ class SettingsWindow:
             self._app_check(page, self.app.autoupdate_var, self.app.on_autoupdate_checkbox,
                             "Update automatically",
                             "New versions are downloaded, checked and installed on their own.")
+        self._check(page, "usage_ping", "Send an anonymous usage count",
+                    "A random install id and the app version, every 30 minutes, so the author can see "
+                    "how many people use Media RPC. No film names, no personal data.")
         self._check(page, "hide_when_paused", "Hide my status while the video is paused",
                     "When off, the card says \"Paused\" and the timer stops.")
         self._check(page, "show_extra", "Show genre and rating",

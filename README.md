@@ -234,3 +234,16 @@ Without a tag, run **Actions > Build Windows exe > Run workflow** and download t
 Media RPC is free. If it's useful to you, you can support it on [Ko-fi](https://ko-fi.com/mediarpc).
 
 Questions, feedback or just want to chat? [Join the Discord server](https://discord.gg/jFzf46hEwf).
+
+## Anonymous usage count
+
+So the author can see how many installs are in use, Media RPC sends a tiny ping to the project website (`/api/ping`) every 30 minutes while it is running: a **random install id** (made once, stored in your settings file, not linked to your PC, name or account) and the **app version**. It never sends film names, file names or anything you watch, and the server does not store IP addresses. Turn it off in **Settings > Status > Send an anonymous usage count**. The code is in `usage.py` and `site/api/`.
+
+## Admin page (for the author)
+
+`/admin` on the website shows installs in use now / last 24 h / 7 days / 30 days, new installs per day, app versions and the latest installs. It needs a one-time setup on Vercel:
+
+1. Vercel project > **Storage** > create / connect **Upstash for Redis** (free). This adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically.
+2. Project > **Settings > Environment Variables**: add `ADMIN_PASSWORD` with a long password.
+3. **Redeploy**, then open `https://<your-site>/admin` and sign in.
+

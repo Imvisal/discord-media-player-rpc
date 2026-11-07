@@ -27,6 +27,7 @@ import players
 import settings_window
 import system_integration as sysint
 import updater
+import usage
 import web_tabs
 from theme import (ACCENT, ACCENT_HOVER, BG, CARD, CARD_HOVER, ERROR, GREEN, MUTED, RED,
                    RED_HOVER, TEXT, YELLOW)
@@ -486,6 +487,7 @@ class App:
         self.root.after(200, self.process_events)
         self.root.after(1000, self.tick)
         self.root.after(UPDATE_FIRST_CHECK_MS, self.auto_check_updates)
+        self.root.after(15000, self.usage_ping)
 
         self.setup_tray()
         self.start()   # open karanakotama auto-start
@@ -714,6 +716,12 @@ class App:
 
     def on_autoupdate_checkbox(self):
         sysint.set_setting("auto_update_check", bool(self.autoupdate_var.get()))
+
+    def usage_ping(self):
+        """Anonymous "this install is running" ping, every 30 minutes (Settings > Status can turn it off)."""
+        if self.settings.get("usage_ping"):
+            threading.Thread(target=usage.ping, daemon=True).start()
+        self.root.after(usage.PING_EVERY_MS, self.usage_ping)
 
     def auto_check_updates(self):
         """Palaweni check eka + paya 6k pasuwa pasuwa. Checkbox eka off nam check karanne nae."""

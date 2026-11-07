@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Media RPC admin</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 { font-family: var(--font-display); font-size: 1.8rem; margin: 0 0 4px; color: var(--strong); }
+    .sub { color: var(--muted); margin: 0 0 24px; font-size: .95rem; }
+    .login { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0; }
+    .login input { flex: 1 1 220px; background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+      border-radius: 10px; padding: 12px 14px; font: inherit; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+    .stat b { display: block; font-family: var(--font-display); font-size: 2rem; color: var(--strong); line-height: 1.1; }
+    .stat span { color: var(--muted); font-size: .85rem; }
+    .stat.hot b { color: var(--accent); }
+    h2 { font-family: var(--font-display); font-size: 1.1rem; margin: 28px 0 10px; color: var(--strong); }
+    .bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 8px; }
+    .bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; min-width: 0; }
+    .bar i { display: block; width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
+    .bar small { color: var(--faint); font-size: .65rem; }
+    .bar em { color: var(--muted); font-size: .7rem; font-style: normal; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line);
+      border-radius: 14px; overflow: hidden; font-size: .9rem; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--divider); }
+    th { color: var(--muted); font-weight: 500; font-size: .8rem; }
+    td.mono { font-family: var(--font-mono); }
+    .err { color: #ff7a7a; margin: 8px 0; min-height: 1.4em; }
+    .note { color: var(--faint); font-size: .8rem; margin-top: 16px; }
+    .hide { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Media RPC admin</h1>
+    <p class="sub">How many installs are using the app. Only anonymous random install ids are counted: no names, IPs or titles.</p>
+
+    <form class="login" id="login">
+      <input type="password" id="key" placeholder="Admin password" autocomplete="current-password">
+      <button class="btn btn-primary" type="submit">Open</button>
+    </form>
+    <div class="err" id="err"></div>
+
+    <div id="panel" class="hide">
+      <div class="grid">
+        <div class="stat hot"><b id="s-now">-</b><span>Using it now (last 45 min)</span></div>
+        <div class="stat"><b id="s-day">-</b><span>Active, last 24 hours</span></div>
+        <div class="stat"><b id="s-week">-</b><span>Active, last 7 days</span></div>
+        <div class="stat"><b id="s-month">-</b><span>Active, last 30 days</span></div>
+        <div class="stat"><b id="s-total">-</b><span>Installs seen, all time</span></div>
+      </div>
+
+      <h2>New installs per day</h2>
+      <div class="bars" id="days"></div>
+
+      <h2>App versions</h2>
+      <table><thead><tr><th>Version</th><th>Installs</th></tr></thead><tbody id="versions"></tbody></table>
+
+      <h2>Latest installs</h2>
+      <table><thead><tr><th>Install</th><th>Version</th><th>Last seen</th><th>First seen</th></tr></thead><tbody id="recent"></tbody></table>
+      <p class="note" id="updated"></p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      var timer = null;
+
+      function ago(ms) {
+        var s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+        if (s < 90) return 'just now';
+        if (s < 5400) return Math.round(s / 60) + ' min ago';
+        if (s < 129600) return Math.round(s / 3600) + ' h ago';
+        return Math.round(s / 86400) + ' days ago';
+      }
+      function row(cells) {
+        var tr = document.createElement('tr');
+        cells.forEach(function (c, i) {
+          var td = document.createElement('td');
+          td.textContent = c;
+          if (i === 0 && cells.length > 2) td.className = 'mono';
+          tr.appendChild(td);
+        });
+        return tr;
+      }
+
+      function render(d) {
+        $('s-now').textContent = d.activeNow;
+        $('s-day').textContent = d.day;
+        $('s-week').textContent = d.week;
+        $('s-month').textContent = d.month;
+        $('s-total').textContent = d.total;
+
+        var max = Math.max.apply(null, d.days.map(function (x) { return x.new; }).concat([1]));
+        var box = $('days'); box.textContent = '';
+        d.days.forEach(function (x) {
+          var b = document.createElement('div'); b.className = 'bar';
+          var n = document.createElement('em'); n.textContent = x.new || '';
+          var i = document.createElement('i'); i.style.height = Math.round((x.new / max) * 70) + 'px';
+          var l = document.createElement('small'); l.textContent = x.day.slice(5);
+          b.appendChild(n); b.appendChild(i); b.appendChild(l); box.appendChild(b);
+        });
+
+        var vt = $('versions'); vt.textContent = '';
+        Object.keys(d.versions).sort(function (a, b) { return d.versions[b] - d.versions[a]; })
+          .forEach(function (v) { vt.appendChild(row(['v' + v, d.versions[v]])); });
+
+        var rt = $('recent'); rt.textContent = '';
+        d.recent.forEach(function (r) {
+          rt.appendChild(row([r.id, r.version ? 'v' + r.version : '', ago(r.lastSeen), r.firstSeen ? ago(r.firstSeen) : '']));
+        });
+        $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString() + '. Refreshes every minute.';
+      }
+
+      function load(key, remember) {
+        $('err').textContent = '';
+        fetch('/api/stats', { headers: { 'x-admin-key': key }, cache: 'no-store' })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            if (!res.ok) {
+              $('err').textContent = res.j.error || 'Could not load.';
+              $('panel').classList.add('hide');
+              try { sessionStorage.removeItem('mr-admin'); } catch (e) {}
+              return;
+            }
+            if (remember) { try { sessionStorage.setItem('mr-admin', key); } catch (e) {} }
+            $('panel').classList.remove('hide');
+            render(res.j);
+            clearTimeout(timer);
+            timer = setTimeout(function () { load(key, false); }, 60000);
+          })
+          .catch(function () { $('err').textContent = 'Could not reach the server.'; });
+      }
+
+      $('login').addEventListener('submit', function (e) {
+        e.preventDefault();
+        if ($('key').value) load($('key').value, true);
+      });
+      try { var saved = sessionStorage.getItem('mr-admin'); if (saved) load(saved, false); } catch (e) {}
+    })();
+  </script>
+</body>
+</html>

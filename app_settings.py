@@ -19,6 +19,7 @@ DEFAULTS = {
     "mpc_port": 13579,           # MPC-HC / MPC-BE web interface
     "web_enabled": True,         # detect films on websites in the browser (tab title): on by default
     "web_youtube": False,        # also detect films / series playing on YouTube
+    "usage_ping": True,          # anonymous usage count (random install id + version), see usage.py
     "web_sites": [],             # site names to look for in the tab title
 }
 
